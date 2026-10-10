@@ -1,12 +1,20 @@
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-^&2$6ewpame$&5t=r8r_4h@*5ev&qpoeth^ou)k1wvx8bw=nni'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-^&2$6ewpame$&5t=r8r_4h@*5ev&qpoeth^ou)k1wvx8bw=nni')
 
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = ['*']
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.vercel.app',
+    'https://*.now.sh',
+    'http://127.0.0.1',
+    'http://localhost',
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -49,16 +57,37 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'coeus.wsgi.application'
 
+import sys
 import dj_database_url
-import os
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('postgresql://neondb_owner:npg_Tn5uajbz4VxH@ep-summer-tooth-b8u50573-pooler.c-14.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require')
-    )
-}
+NEON_DEFAULT_URL = (
+    'postgresql://neondb_owner:npg_Tn5uajbz4VxH@ep-summer-tooth-b8u50573-pooler.c-14.us-east-1.aws.neon.tech/neondb?sslmode=require'
+)
+DATABASE_URL = os.environ.get('DATABASE_URL', NEON_DEFAULT_URL)
+
+if 'test' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
     }
-}
+else:
+    try:
+        DATABASES = {
+            'default': dj_database_url.parse(
+                DATABASE_URL,
+                conn_max_age=0,
+                ssl_require=True,
+            )
+        }
+    except Exception:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
 
 AUTH_USER_MODEL = 'core.CoeusUser'
 
@@ -77,7 +106,8 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+WHITENOISE_USE_FINDERS = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -86,7 +116,6 @@ LOGIN_REDIRECT_URL = '/dashboard'
 LOGOUT_REDIRECT_URL = '/'
 
 # ─── Payment & Subscription Settings ──────────────────────────────────────────
-import os
 
 PAYSTACK_PUBLIC_KEY = os.environ.get('PAYSTACK_PUBLIC_KEY', 'pk_test_sample_coeus_key')
 PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY', 'sk_test_sample_coeus_key')

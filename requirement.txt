@@ -7,3 +7,5 @@ asgiref==3.11.1
 sqlparse==0.5.5
 cffi==2.1.1
 pycparser==3.0
+psycopg2-binary
+dj-database-url
