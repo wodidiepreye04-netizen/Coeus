@@ -1,0 +1,10 @@
+{
+  "builds": [{
+    "src": "coeus/wsgi.py",
+    "use": "@vercel/python"
+  }],
+  "routes": [{
+    "src": "/(.*)",
+    "dest": "coeus/wsgi.py"
+  }]
+}
