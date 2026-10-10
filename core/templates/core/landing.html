@@ -1,0 +1,383 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}COEUS — Total mental wellness. Uncompromising privacy.{% endblock %}
+
+{% block body %}
+
+<!-- ── TOP NAVIGATION ── -->
+<nav>
+  <div class="nav-inner">
+    <a href="{% url 'landing' %}" class="nav-logo">
+      <img src="{% static 'img/coeuslogo.jpeg' %}" alt="COEUS" class="nav-logo-img" />
+    </a>
+    <ul class="nav-links">
+      <li><a href="#how-it-works">How it works</a></li>
+      <li><a href="#practitioners">Practitioners</a></li>
+      <li><a href="{% url 'signup' %}" class="btn btn-primary" style="padding:0.45rem 1.25rem;font-size:0.85rem;color:#FFFFFF !important;">Get talking</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ── HERO SECTION ── -->
+<section class="hero hero--minimal">
+  <div class="container">
+    <div class="hero-content hero-content--centered">
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        <span>Gentle, confidential mental health care</span>
+      </div>
+
+      <h1 class="hero-headline">
+        Total mental wellness.<br>
+        <em>Uncompromising</em> privacy.
+      </h1>
+
+      <p class="hero-sub">
+        COEUS is a private, clinically grounded sanctuary for your mind. Reflect daily in personal journals, receive thoughtful guidance, and speak with licensed therapists—designed from day one so your vulnerable moments are never commodified.
+      </p>
+
+      <div class="hero-ctas">
+        <a href="{% url 'signup' %}" class="btn btn-primary btn-lg" style="color:#FFFFFF !important;">Get talking</a>
+      </div>
+
+      <!-- Micro-guarantees -->
+      <div class="hero-guarantees">
+        <div class="hero-guarantee-item">
+          <span class="hero-guarantee-icon">✓</span>
+          <span>Zero ads or data tracking</span>
+        </div>
+        <div class="hero-guarantee-item">
+          <span class="hero-guarantee-icon">✓</span>
+          <span>Private, protected records</span>
+        </div>
+        <div class="hero-guarantee-item">
+          <span class="hero-guarantee-icon">✓</span>
+          <span>Vetted, licensed practitioners</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ── -->
+<section class="how-it-works" id="how-it-works">
+  <div class="container">
+    <div>
+      <span class="section-tag">How care works</span>
+      <h2 class="section-title">Support that meets you where you are.</h2>
+      <p class="section-sub">
+        Every step is designed to give you clarity, comfort, and direct human connection without unnecessary complexity.
+      </p>
+    </div>
+
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-number">Step 01</div>
+        <span class="step-icon">🌱</span>
+        <h3>Begin in your own time</h3>
+        <p>Take a quiet moment to reflect on how you feel. Your entries are private to you from the moment you begin writing.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">Step 02</div>
+        <span class="step-icon">🌤️</span>
+        <h3>Reflect and find your balance</h3>
+        <p>Track your daily mood in words that feel natural to you. Gain gentle perspective on your emotional patterns week by week.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">Step 03</div>
+        <span class="step-icon">🤝</span>
+        <h3>Speak with someone who listens</h3>
+        <p>When you feel ready for deeper support, connect directly with an accredited therapist for private one-on-one sessions.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CONCIERGE CARE & PRACTITIONERS ── -->
+<section class="bento-section" id="features">
+  <div class="container">
+    <div>
+      <span class="section-tag">Concierge care</span>
+      <h2 class="section-title">Engineered for trust. Designed for peace.</h2>
+      <p class="section-sub">
+        A mental health platform should feel like a vault for your emotions, not a social feed competing for your attention.
+      </p>
+    </div>
+
+    <div class="bento-grid">
+      <!-- Bento Card 1: Private Space (Span 7) -->
+      <div class="bento-card bento-card--accent bento-span-7">
+        <div>
+          <div class="bento-card-top">
+            <div class="bento-icon-box">🌿</div>
+            <span class="bento-badge">Quiet sanctuary</span>
+          </div>
+          <h3 class="bento-title">A completely private space for your thoughts</h3>
+          <p class="bento-desc">
+            Your personal journals and daily reflections stay private to you. We have designed our platform so no outside eyes, marketing algorithms, or third parties can ever read what you share.
+          </p>
+        </div>
+        <div class="bento-visual">
+          <div style="font-size:0.85rem;font-weight:600;color:var(--deep-teal);display:flex;align-items:center;gap:0.5rem;">
+            <span>🛡️</span>
+            <span>Always private · Always protected · Zero ads</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bento Card 2: Cultural Attunement (Span 5) -->
+      <div class="bento-card bento-span-5">
+        <div>
+          <div class="bento-card-top">
+            <div class="bento-icon-box">🗣️</div>
+            <span class="bento-badge">Multilingual</span>
+          </div>
+          <h3 class="bento-title">Culturally attuned care</h3>
+          <p class="bento-desc">
+            Speak your truth naturally. Whether you express yourself in Pidgin ("body dey heavy me"), Yorùbá, Igbo, Hausa, or English, COEUS understands Nigerian nuances with deep cultural empathy.
+          </p>
+        </div>
+        <div class="bento-visual">
+          <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+            <span class="tp-tag">English</span>
+            <span class="tp-tag">Pidgin</span>
+            <span class="tp-tag">Yorùbá</span>
+            <span class="tp-tag">Igbo</span>
+            <span class="tp-tag">Hausa</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bento Card 3: Discreet Device Access (Span 5) -->
+      <div class="bento-card bento-span-5">
+        <div>
+          <div class="bento-card-top">
+            <div class="bento-icon-box">🔒</div>
+            <span class="bento-badge">Discreet access</span>
+          </div>
+          <h3 class="bento-title">Protected on your personal device</h3>
+          <p class="bento-desc">
+            Access your personal sanctuary seamlessly whenever you need a peaceful moment, locked behind your device's biometric security so only you can enter.
+          </p>
+        </div>
+        <div class="bento-visual">
+          <div style="font-size:0.82rem;font-weight:600;color:var(--deep-teal);display:flex;align-items:center;gap:0.5rem;">
+            <span>✨</span>
+            <span>Biometric access · Zero unnecessary notifications</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bento Card 4: Clinical Continuity (Span 7) — id="practitioners" -->
+      <div class="bento-card bento-card--green bento-span-7" id="practitioners">
+        <div>
+          <div class="bento-card-top">
+            <div class="bento-icon-box">🤝</div>
+            <span class="bento-badge">Licensed practitioners</span>
+          </div>
+          <h3 class="bento-title">Dignified clinical continuity</h3>
+          <p class="bento-desc">
+            You are never left navigating life alone. When you feel ready for professional support, connect directly with vetted Nigerian psychologists for confidential one-on-one sessions.
+          </p>
+        </div>
+        <div class="bento-visual">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;">
+            <div>
+              <strong style="font-size:0.88rem;color:var(--deep-teal);display:block;">Licensed clinical partners</strong>
+              <span style="font-size:0.75rem;color:var(--mist-blue);">Accredited counsellors across Lagos, Abuja, Ibadan & PH</span>
+            </div>
+            <a href="{% url 'appointment_book' %}" class="btn btn-primary" style="padding:0.4rem 1rem;font-size:0.78rem;color:#FFFFFF !important;">Book a session →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRIVACY & TRUST ── -->
+<section class="privacy-section" id="privacy">
+  <div class="container">
+    <div style="max-width:760px;margin:0 auto;text-align:center;">
+      <span class="section-tag">Privacy and trust</span>
+      <h2 class="section-title">A safe, respectful sanctuary for your mind.</h2>
+      <div style="background:#FFFFFF;border:1px solid rgba(110,159,174,0.25);border-radius:var(--radius);padding:2.5rem;margin-top:2rem;text-align:left;box-shadow:var(--shadow-card);">
+        <p style="font-size:1.05rem;line-height:1.8;color:var(--deep-teal);margin-bottom:1.25rem;">
+          Your privacy is the foundation of everything we do. At COEUS, we believe seeking mental health support should never come with the fear of being tracked, judged, or commercialized. We do not sell your personal information, run advertisements, or share your private reflections with outside parties.
+        </p>
+        <p style="font-size:1.05rem;line-height:1.8;color:var(--deep-teal);margin-bottom:1.5rem;">
+          Every reflection and conversation is treated with profound dignity, discretion, and care, giving you a quiet place where you can speak freely and heal in peace.
+        </p>
+        <div style="padding-top:1.25rem;border-top:1px solid rgba(110,159,174,0.2);">
+          <a href="{% url 'privacy' %}" style="font-size:0.9rem;font-weight:600;color:var(--coeus-blue);">Read our full privacy policy →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── MEMBERSHIP & PRICING ── -->
+<section class="pricing-section" id="pricing">
+  <div class="container">
+    <div style="text-align:center;max-width:680px;margin:0 auto;">
+      <span class="section-tag">Transparent membership</span>
+      <h2 class="section-title">Invest in mental clarity without hidden traps.</h2>
+      <p class="section-sub" style="margin:0 auto;">
+        Choose the level of clinical support that fits your rhythm. Flexible plans with direct Nigerian bank transfer and card payments.
+      </p>
+    </div>
+
+    <div class="pricing-grid">
+      <!-- Basic Plan -->
+      <div class="pricing-card">
+        <div>
+          <h3 class="pricing-plan-title">Basic</h3>
+          <p class="pricing-plan-desc">Four private conversations a month for steady, personal support.</p>
+          <div class="pricing-amount-box">
+            <span class="pricing-currency">₦</span>
+            <span class="pricing-figure">25,000</span>
+            <span class="pricing-interval">/ month · 4 sessions</span>
+          </div>
+          <ul class="pricing-features-list">
+            <li class="pricing-feature-item">
+              <span class="pricing-check">✓</span>
+              <span>4 individual sessions a month</span>
+            </li>
+            <li class="pricing-feature-item">
+              <span class="pricing-check">✓</span>
+              <span>Direct appointment scheduling</span>
+            </li>
+            <li class="pricing-feature-item">
+              <span class="pricing-check">✓</span>
+              <span>Private reflection journal</span>
+            </li>
+            <li class="pricing-feature-item">
+              <span class="pricing-check">✓</span>
+              <span>Personal safety plan</span>
+            </li>
+          </ul>
+        </div>
+        <a href="{% url 'subscribe' %}?plan=basic" class="btn btn-outline" style="width:100%;text-align:center;">
+          Choose Basic
+        </a>
+      </div>
+
+      <!-- Pro Plan (Most Recommended) -->
+      <div class="pricing-card pricing-card--popular">
+        <span class="pricing-popular-pill">Most recommended</span>
+        <div>
+          <h3 class="pricing-plan-title">Pro</h3>
+          <p class="pricing-plan-desc">Eight private conversations a month for deeper, ongoing guidance.</p>
+          <div class="pricing-amount-box">
+            <span class="pricing-currency">₦</span>
+            <span class="pricing-figure">45,000</span>
+            <span class="pricing-interval">/ month · 8 sessions</span>
+          </div>
+          <ul class="pricing-features-list">
+            <li class="pricing-feature-item">
+              <span class="pricing-check">✓</span>
+              <span>8 individual sessions a month</span>
+            </li>
+            <li class="pricing-feature-item">
+              <span class="pricing-check">✓</span>
+              <span>Twice-weekly session rhythm</span>
+            </li>
+            <li class="pricing-feature-item">
+              <span class="pricing-check">✓</span>
+              <span>Priority practitioner matching</span>
+            </li>
+            <li class="pricing-feature-item">
+              <span class="pricing-check">✓</span>
+              <span>Personal safety plan with direct check-ins</span>
+            </li>
+          </ul>
+        </div>
+        <a href="{% url 'subscribe' %}?plan=pro" class="btn btn-primary" style="width:100%;text-align:center;color:#FFFFFF !important;">
+          Choose Pro →
+        </a>
+      </div>
+
+      <!-- Max Plan -->
+      <div class="pricing-card">
+        <div>
+          <h3 class="pricing-plan-title">Max</h3>
+          <p class="pricing-plan-desc">Twelve private conversations a month for comprehensive, intensive care.</p>
+          <div class="pricing-amount-box">
+            <span class="pricing-currency">₦</span>
+            <span class="pricing-figure">65,000</span>
+            <span class="pricing-interval">/ month · 12 sessions</span>
+          </div>
+          <ul class="pricing-features-list">
+            <li class="pricing-feature-item">
+              <span class="pricing-check">✓</span>
+              <span>12 individual sessions a month</span>
+            </li>
+            <li class="pricing-feature-item">
+              <span class="pricing-check">✓</span>
+              <span>Flexible, comprehensive scheduling</span>
+            </li>
+            <li class="pricing-feature-item">
+              <span class="pricing-check">✓</span>
+              <span>Dedicated lead practitioner partnership</span>
+            </li>
+            <li class="pricing-feature-item">
+              <span class="pricing-check">✓</span>
+              <span>Full personal care toolkit access</span>
+            </li>
+          </ul>
+        </div>
+        <a href="{% url 'subscribe' %}?plan=max" class="btn btn-outline" style="width:100%;text-align:center;">
+          Choose Max
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER & CRISIS CARE BANNER ── -->
+<footer>
+  <div class="container">
+
+    <!-- Crisis Ribbon Banner -->
+    <div class="crisis-banner">
+      <div class="crisis-banner-content">
+        <div class="crisis-banner-icon">🤝</div>
+        <div>
+          <div class="crisis-banner-title">Immediate crisis care available 24/7</div>
+          <div class="crisis-banner-text">
+            If you or someone you know is in acute danger or emotional crisis, immediate help is available. You don't have to carry this alone.
+          </div>
+        </div>
+      </div>
+      <a href="tel:08000000000" class="crisis-banner-btn">
+        Crisis hotline: 0800-COEUS-CARE
+      </a>
+    </div>
+
+    <!-- Limits of Confidentiality Disclaimer -->
+    <div class="footer-disclaimer" style="margin-top:2.5rem;padding:1.5rem;background:rgba(227,242,238,0.5);border:1px solid rgba(110,159,174,0.25);border-radius:12px;font-size:0.82rem;line-height:1.6;color:var(--text-muted);">
+      <strong style="color:var(--deep-teal);display:block;margin-bottom:0.35rem;">Limits of confidentiality:</strong>
+      Your privacy and trust are our highest priorities. All sessions and reflections are held in strict clinical confidentiality. However, in accordance with professional ethical standards and Nigerian law, confidentiality may be broken if there is an imminent risk of severe harm to yourself or others, suspected abuse of a minor or vulnerable individual, or a court order requiring disclosure. In such rare emergencies, our duty of care requires us to reach out to appropriate support services to protect human life.
+    </div>
+
+    <!-- Main Footer -->
+    <div class="footer-inner" style="margin-top:2.5rem;">
+      <div>
+        <div class="footer-logo">
+          <img src="{% static 'img/coeuslogo.jpeg' %}" alt="COEUS" class="footer-logo-img" />
+        </div>
+        <p class="footer-copy" style="margin-top:0.4rem;">© 2026 COEUS. Built with dignity for young Nigerians.</p>
+      </div>
+      <ul class="footer-links">
+        <li><a href="{% url 'landing' %}">Home</a></li>
+        <li><a href="#how-it-works">How it works</a></li>
+        <li><a href="#practitioners">Practitioners</a></li>
+        <li><a href="{% url 'privacy' %}">Privacy policy</a></li>
+        <li><a href="{% url 'therapist_login' %}" style="color:var(--coeus-blue);">Therapist portal →</a></li>
+        <li><a href="mailto:hello@coeus.ng">Contact</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+{% endblock %}

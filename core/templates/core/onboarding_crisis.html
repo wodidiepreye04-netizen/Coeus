@@ -1,0 +1,55 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}We're Here For You — COEUS{% endblock %}
+
+{% block body %}
+<div class="onboarding-page">
+  <div class="onboarding-card onboarding-card--crisis">
+
+    <div class="crisis-warning-icon">⚠️</div>
+
+    <h1 class="onboarding-title">We're here for you</h1>
+    <p class="onboarding-sub">Based on your responses, we want to make sure you have immediate resources available.</p>
+
+    <div class="onboarding-divider"></div>
+
+    <div class="crisis-block">
+      <p class="crisis-block-heading">🆘 Immediate Help — Nigeria</p>
+      <ul class="crisis-list">
+        <li>
+          <span class="crisis-label">Emergency</span>
+          <a href="tel:112" class="crisis-number">112</a>
+          <span class="crisis-sep">or</span>
+          <a href="tel:767" class="crisis-number">767</a>
+        </li>
+        <li>
+          <span class="crisis-label">Suicide Prevention</span>
+          <a href="tel:+2348062106493" class="crisis-number">+234 806 210 6493</a>
+        </li>
+        <li>
+          <span class="crisis-label">Mental Health Nigeria</span>
+          <a href="tel:+2348111110323" class="crisis-number">+234 811 111 0323</a>
+        </li>
+        <li>
+          <span class="crisis-label">Mentally Aware Nigeria</span>
+          <a href="tel:+2348092100009" class="crisis-number">+234 809 210 0009</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="onboarding-divider"></div>
+
+    <ul class="crisis-reassurance">
+      <li>Your account is flagged for priority support</li>
+      <li>You'll be connected to human support quickly if needed</li>
+    </ul>
+
+    <div class="crisis-actions">
+      <a href="tel:112" class="btn btn-crisis-call btn-block">Call Emergency (112)</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline btn-block" style="margin-top: 0.75rem;">Continue to Chat</a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

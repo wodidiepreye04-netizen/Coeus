@@ -1,0 +1,43 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Age Requirement — COEUS{% endblock %}
+
+{% block body %}
+<div class="onboarding-page">
+  <div class="onboarding-card">
+
+    <div class="onboarding-logo">
+      <img src="{% static 'img/coeuslogo.jpeg' %}" alt="COEUS" class="auth-logo-img" />
+    </div>
+
+    <h1 class="onboarding-title">COEUS is for users 18+</h1>
+    <p class="onboarding-sub">We're not able to continue your sign-up right now, but you're not alone.</p>
+
+    <div class="onboarding-divider"></div>
+
+    <div class="crisis-block">
+      <p class="crisis-block-heading">Support for young people in Nigeria</p>
+      <ul class="crisis-list">
+        <li>
+          <span class="crisis-label">Emergency</span>
+          <a href="tel:112" class="crisis-number">112</a>
+          <span class="crisis-sep">or</span>
+          <a href="tel:767" class="crisis-number">767</a>
+        </li>
+        <li>
+          <span class="crisis-label">Suicide Prevention</span>
+          <a href="tel:+2348062106493" class="crisis-number">+234 806 210 6493</a>
+        </li>
+        <li>
+          <span class="crisis-label">Mentally Aware Nigeria</span>
+          <a href="tel:+2348092100009" class="crisis-number">+234 809 210 0009</a>
+        </li>
+      </ul>
+    </div>
+
+    <a href="{% url 'signout' %}" class="btn btn-outline btn-block" style="margin-top: 2rem;">Go back</a>
+
+  </div>
+</div>
+{% endblock %}

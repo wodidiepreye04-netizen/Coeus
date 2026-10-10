@@ -1,0 +1,78 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}About You — COEUS{% endblock %}
+
+{% block body %}
+<div class="onboarding-page">
+  <div class="onboarding-card">
+
+    <a href="{% url 'onboarding_welcome' %}" class="onboarding-back">← Back</a>
+
+    <h1 class="onboarding-title">Tell us about yourself</h1>
+    <p class="onboarding-sub">This helps us support you better</p>
+
+    <div class="onboarding-divider"></div>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="field">
+        <label for="id_display_name">What should we call you?</label>
+        {{ form.display_name }}
+        {% if form.display_name.errors %}
+          <span class="field-error">{{ form.display_name.errors.0 }}</span>
+        {% endif %}
+      </div>
+
+      <div class="field">
+        <label for="id_age">How old are you?</label>
+        {{ form.age }}
+        {% if form.age.errors %}
+          <span class="field-error">
+            {% if "under_18" in form.age.errors.0 %}
+              COEUS is available for users 18 and older.
+            {% else %}
+              {{ form.age.errors.0 }}
+            {% endif %}
+          </span>
+        {% endif %}
+      </div>
+
+      <div class="field">
+        <label>Gender <span class="field-optional">(optional)</span></label>
+        <div class="radio-group">
+          {% for value, label in form.gender.field.choices %}
+            {% if value %}
+              <label class="radio-option">
+                <input type="radio" name="gender" value="{{ value }}"
+                  {% if form.gender.value == value %}checked{% endif %}>
+                <span>{{ label }}</span>
+              </label>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="id_country">Where are you from?</label>
+        <div class="select-wrapper">
+          {{ form.country }}
+        </div>
+        {% if form.country.errors %}
+          <span class="field-error">{{ form.country.errors.0 }}</span>
+        {% endif %}
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top: 1.5rem;">Continue</button>
+    </form>
+
+    <div class="onboarding-progress">
+      <span class="onboarding-dot"></span>
+      <span class="onboarding-dot onboarding-dot--active"></span>
+      <span class="onboarding-dot"></span>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

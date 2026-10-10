@@ -1,0 +1,25 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Safety Plan — COEUS{% endblock %}
+
+{% block body %}
+<div class="onboarding-page">
+  <div class="onboarding-card" style="max-width:560px;">
+    <a href="{% url 'dashboard' %}" class="onboarding-back">← Back to Dashboard</a>
+    <h1 class="onboarding-title">My Safety Plan</h1>
+    <p class="onboarding-sub">A personal plan to help you stay safe during difficult moments.</p>
+    <div class="onboarding-divider"></div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="sp-field">
+          <label class="field-label-lg">{{ field.label }}</label>
+          {{ field }}
+        </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top:1.5rem;">Save Safety Plan</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

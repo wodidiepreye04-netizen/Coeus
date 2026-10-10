@@ -1,0 +1,85 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Therapist — COEUS{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}" />
+</head>
+<body class="tp-body">
+  <div class="tp-layout">
+
+    <!-- ── Sidebar ── -->
+    <aside class="tp-sidebar">
+      <div class="tp-sidebar-head">
+        <a href="{% url 'therapist_dashboard' %}" class="tp-sidebar-logo">
+          <img src="{% static 'img/coeuslogo.jpeg' %}" alt="COEUS" class="tp-sidebar-logo-img" />
+        </a>
+        <span class="tp-sidebar-badge">Therapist</span>
+      </div>
+
+      <div class="tp-sidebar-nav" role="navigation" aria-label="Therapist navigation">
+        <a href="{% url 'therapist_dashboard' %}"
+           class="tp-nav-item {% if active_page == 'dashboard' %}tp-nav-item--active{% endif %}">
+          <span class="tp-nav-icon">📊</span>
+          <span>Dashboard</span>
+        </a>
+        <a href="{% url 'therapist_dashboard' %}#availability"
+           class="tp-nav-item">
+          <span class="tp-nav-icon">📅</span>
+          <span>Schedule & Availability</span>
+        </a>
+        <a href="{% url 'therapist_patients' %}"
+           class="tp-nav-item {% if active_page == 'patients' %}tp-nav-item--active{% endif %}">
+          <span class="tp-nav-icon">👥</span>
+          <span>Patients</span>
+        </a>
+      </div>
+
+      <div class="tp-sidebar-footer">
+        <div class="tp-sidebar-user">
+          <span class="tp-sidebar-user-name">{{ request.user.email }}</span>
+          <span class="tp-sidebar-user-role">{{ request.user.get_role_display }}</span>
+        </div>
+        <a href="{% url 'signout' %}" class="tp-nav-item tp-nav-item--signout">
+          <span class="tp-nav-icon">🚪</span>
+          <span>Sign out</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- ── Mobile top bar ── -->
+    <header class="tp-mobile-header">
+      <a href="{% url 'therapist_dashboard' %}" class="tp-mobile-logo">
+        <img src="{% static 'img/coeuslogo.jpeg' %}" alt="COEUS" class="tp-sidebar-logo-img" />
+      </a>
+      <button class="tp-mobile-menu-btn" id="tp-menu-toggle" aria-label="Toggle menu">☰</button>
+    </header>
+
+    <!-- ── Main content ── -->
+    <main class="tp-main">
+      {% block content %}{% endblock %}
+    </main>
+
+  </div>
+
+  <script>
+    // Mobile sidebar toggle
+    const toggle = document.getElementById('tp-menu-toggle');
+    const sidebar = document.querySelector('.tp-sidebar');
+    if (toggle) {
+      toggle.addEventListener('click', () => {
+        sidebar.classList.toggle('tp-sidebar--open');
+      });
+      // Close sidebar when clicking outside on mobile
+      document.querySelector('.tp-main').addEventListener('click', () => {
+        sidebar.classList.remove('tp-sidebar--open');
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+{% extends "core/therapist/base.html" %}
+
+{% block title %}Patients Directory — COEUS Therapist{% endblock %}
+
+{% block content %}
+<div class="tp-page">
+  <div class="tp-page-header">
+    <h1 class="tp-page-title">Patient Directory & Clinical Quotas</h1>
+    <p class="tp-page-sub">All registered patients who have completed clinical intake and onboarding.</p>
+  </div>
+
+  <!-- ── Search ── -->
+  <form method="get" class="tp-search-form">
+    <div class="tp-search-wrap">
+      <input type="text" name="q" value="{{ q }}" placeholder="Search by name or email…" class="tp-search-input" />
+      <button type="submit" class="tp-btn tp-btn--search">Search</button>
+      {% if q %}
+        <a href="{% url 'therapist_patients' %}" class="tp-btn tp-btn--ghost">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- ── Patient Table ── -->
+  <section class="tp-card">
+    {% if patients %}
+      <div class="tp-table-wrap">
+        <table class="tp-table">
+          <thead>
+            <tr>
+              <th>Patient Name</th>
+              <th>Email</th>
+              <th>Demographics</th>
+              <th>Triage Risk</th>
+              <th>Subscription & Session Quota</th>
+              <th>Joined</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for patient in patients %}
+              <tr>
+                <td class="tp-td-bold">
+                  {% if patient.onboarding %}
+                    {{ patient.onboarding.display_name }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td>{{ patient.email }}</td>
+                <td>
+                  {% if patient.onboarding %}
+                    {{ patient.onboarding.age }} yrs · {{ patient.onboarding.country }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td>
+                  {% if patient.onboarding %}
+                    {% if patient.onboarding.risk_level == "high" %}
+                      <span class="tp-badge tp-badge--danger">High Risk</span>
+                    {% else %}
+                      <span class="tp-badge tp-badge--ok">Normal</span>
+                    {% endif %}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td>
+                  {% if patient.has_active_subscription %}
+                    <span class="tp-badge tp-badge--ok">{{ patient.active_subscription.get_plan_display }}</span>
+                    <span style="display:block;font-size:0.75rem;color:var(--text-muted);margin-top:0.25rem;font-weight:500;">
+                      🎟️ {{ patient.sessions_remaining }} of {{ patient.sessions_allocated }} sessions remaining
+                    </span>
+                  {% else %}
+                    <span class="tp-badge tp-badge--warn">No Active Plan</span>
+                    <span style="display:block;font-size:0.72rem;color:var(--text-subtle);margin-top:0.2rem;">
+                      0 sessions allocated
+                    </span>
+                  {% endif %}
+                </td>
+                <td class="tp-td-muted">{{ patient.date_joined|date:"M j, Y" }}</td>
+                <td>
+                  <a href="{% url 'therapist_patient_detail' patient.id %}" class="tp-btn tp-btn--sm tp-btn--outline">
+                    Clinical Chart →
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="tp-empty">
+        <p>{% if q %}No patients match "{{ q }}".{% else %}No patients registered yet.{% endif %}</p>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

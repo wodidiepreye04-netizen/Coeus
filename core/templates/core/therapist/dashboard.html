@@ -1,0 +1,372 @@
+{% extends "core/therapist/base.html" %}
+
+{% block title %}Dashboard — COEUS Therapist{% endblock %}
+
+{% block content %}
+<div class="tp-page">
+  <div class="tp-page-header">
+    <h1 class="tp-page-title">Clinical Triage & Schedule Dashboard</h1>
+    <p class="tp-page-sub">Manage client triage, native schedule availability, appointments, and subscriptions.</p>
+  </div>
+
+  <!-- ── Stat cards ── -->
+  <div class="tp-stats-row">
+    <div class="tp-stat-card">
+      <span class="tp-stat-number">{{ total_patients }}</span>
+      <span class="tp-stat-label">Total Patients</span>
+    </div>
+    <div class="tp-stat-card tp-stat-card--warning">
+      <span class="tp-stat-number">{{ flagged_count }}</span>
+      <span class="tp-stat-label">Flagged (High-Risk)</span>
+    </div>
+    <div class="tp-stat-card tp-stat-card--accent">
+      <span class="tp-stat-number">{{ pending_count }}</span>
+      <span class="tp-stat-label">Pending Appointments</span>
+    </div>
+    <div class="tp-stat-card">
+      <span class="tp-stat-number">{{ pending_sub_count }}</span>
+      <span class="tp-stat-label">Pending Subscriptions</span>
+    </div>
+  </div>
+
+  <div class="tp-grid">
+
+    <!-- ── 1. Availability / Schedule Management ── -->
+    <section class="tp-card" id="availability" style="border-top: 4px solid var(--accent);">
+      <div class="tp-card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;">
+        <div>
+          <h2 class="tp-card-title">📅 Schedule & Working Hours Availability</h2>
+          <p style="font-size:0.82rem;color:var(--text-muted);margin:0.2rem 0 0;">
+            1-hour booking slots are automatically generated from your active schedule windows.
+          </p>
+        </div>
+        <span class="tp-card-count" style="background:rgba(45,212,191,0.15);color:var(--accent);border-color:rgba(45,212,191,0.3);">
+          {{ availability|length }} active window{{ availability|length|pluralize }}
+        </span>
+      </div>
+
+      <!-- Weekly Schedule Grid -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:1rem;margin-bottom:1.5rem;">
+        {% for day_name, slots in avail_by_day.items %}
+          <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.85rem 1rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;">
+              <strong style="color:var(--text-primary);font-size:0.88rem;">{{ day_name }}</strong>
+              <span style="font-size:0.75rem;color:var(--text-subtle);">{{ slots|length }} window{{ slots|length|pluralize }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:0.5rem;">
+              {% for slot in slots %}
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:0.4rem 0.6rem;background:rgba(0,0,0,0.2);border-radius:4px;border:1px solid {% if slot.is_active %}rgba(45,212,191,0.25){% else %}rgba(255,255,255,0.06){% endif %};font-size:0.82rem;">
+                  <span style="{% if not slot.is_active %}color:var(--text-subtle);text-decoration:line-through;{% else %}color:var(--text-primary);{% endif %}">
+                    ⏰ {{ slot.start_time|time:"g:i A" }} – {{ slot.end_time|time:"g:i A" }}
+                  </span>
+                  <div style="display:flex;gap:0.35rem;align-items:center;">
+                    <form method="post" action="{% url 'therapist_availability_toggle' slot.id %}">
+                      {% csrf_token %}
+                      <button type="submit" class="tp-btn tp-btn--sm {% if slot.is_active %}tp-btn--outline{% else %}tp-btn--confirm{% endif %}"
+                              style="font-size:0.72rem;padding:0.2rem 0.5rem;" title="Toggle slot availability">
+                        {% if slot.is_active %}Disable{% else %}Enable{% endif %}
+                      </button>
+                    </form>
+                    <form method="post" action="{% url 'therapist_availability_delete' slot.id %}">
+                      {% csrf_token %}
+                      <button type="submit" class="tp-btn tp-btn--sm tp-btn--cancel"
+                              style="font-size:0.72rem;padding:0.2rem 0.45rem;" title="Delete schedule window"
+                              onclick="return confirm('Remove this availability window?');">
+                        ✕
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% empty %}
+          <div class="tp-empty" style="grid-column: 1 / -1;">
+            <p>No availability windows configured yet. Use the form below to add working hours.</p>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Add New Window Form -->
+      <div style="background:rgba(255,255,255,0.015);border:1px dashed var(--border);border-radius:var(--radius-sm);padding:1rem 1.25rem;">
+        <h4 style="font-size:0.85rem;color:var(--text-primary);margin-bottom:0.6rem;">+ Add Working Hours Window</h4>
+        <form method="post" action="{% url 'therapist_availability_add' %}" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;">
+          {% csrf_token %}
+          <div style="flex:1;min-width:140px;">
+            <label style="font-size:0.75rem;color:var(--text-subtle);display:block;margin-bottom:0.25rem;">Day of Week</label>
+            <select name="day_of_week" required class="tp-search-input" style="width:100%;padding:0.5rem 0.65rem;background:#111827;color:#fff;border-radius:4px;border:1px solid var(--border);">
+              <option value="0">Monday</option>
+              <option value="1">Tuesday</option>
+              <option value="2">Wednesday</option>
+              <option value="3">Thursday</option>
+              <option value="4">Friday</option>
+              <option value="5">Saturday</option>
+              <option value="6">Sunday</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:120px;">
+            <label style="font-size:0.75rem;color:var(--text-subtle);display:block;margin-bottom:0.25rem;">Start Time</label>
+            <input type="time" name="start_time" value="09:00" required class="tp-search-input" style="width:100%;padding:0.5rem 0.65rem;background:#111827;color:#fff;border-radius:4px;border:1px solid var(--border);">
+          </div>
+          <div style="flex:1;min-width:120px;">
+            <label style="font-size:0.75rem;color:var(--text-subtle);display:block;margin-bottom:0.25rem;">End Time</label>
+            <input type="time" name="end_time" value="17:00" required class="tp-search-input" style="width:100%;padding:0.5rem 0.65rem;background:#111827;color:#fff;border-radius:4px;border:1px solid var(--border);">
+          </div>
+          <button type="submit" class="tp-btn tp-btn--primary" style="padding:0.55rem 1.15rem;font-size:0.82rem;">
+            Add Availability Window
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ── 2. Pending Bank Transfers & Subscriptions ── -->
+    {% if pending_subscriptions %}
+    <section class="tp-card" style="border-left: 4px solid var(--calm-amber);">
+      <div class="tp-card-header">
+        <h2 class="tp-card-title">💳 Pending Subscriptions & Bank Transfers</h2>
+        <span class="tp-card-count" style="background:#FEF3C7;color:#85530B;border-color:rgba(224,164,74,0.4);">
+          {{ pending_subscriptions|length }} pending review
+        </span>
+      </div>
+      <div class="tp-table-wrap">
+        <table class="tp-table">
+          <thead>
+            <tr>
+              <th>Patient</th>
+              <th>Requested Plan</th>
+              <th>Amount</th>
+              <th>Sender / Bank</th>
+              <th>Reference</th>
+              <th>Date</th>
+              <th>Confirm & Credit Quota</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for sub in pending_subscriptions %}
+              <tr>
+                <td>
+                  <a href="{% url 'therapist_patient_detail' sub.user.id %}" class="tp-link">
+                    {{ sub.user.email }}
+                  </a>
+                </td>
+                <td>
+                  <strong style="color:var(--text-primary);">{{ sub.get_plan_display }}</strong>
+                  <span style="display:block;font-size:0.72rem;color:var(--text-subtle);">
+                    {% if sub.plan == 'max' %}12 sessions request{% elif sub.plan == 'pro' %}8 sessions request{% else %}4 sessions request{% endif %}
+                  </span>
+                </td>
+                <td>₦{{ sub.amount|floatformat:0 }}</td>
+                <td>
+                  {{ sub.sender_name|default:"—" }}
+                  {% if sub.sender_bank %}<span class="tp-td-muted">({{ sub.sender_bank }})</span>{% endif %}
+                </td>
+                <td><code>{{ sub.reference }}</code></td>
+                <td class="tp-td-muted">{{ sub.created_at|date:"M j, g:i A" }}</td>
+                <td>
+                  <form method="post" action="{% url 'therapist_subscription_action' sub.id %}" style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="approve">
+                    <input type="hidden" name="next" value="therapist_dashboard">
+
+                    <!-- Plan Verification Selector -->
+                    <select name="confirmed_plan" style="padding:0.25rem 0.45rem;background:#111827;border:1px solid var(--border);border-radius:4px;color:#fff;font-size:0.75rem;">
+                      <option value="basic" {% if sub.plan == 'basic' %}selected{% endif %}>Basic (4 sessions · ₦25,000)</option>
+                      <option value="pro" {% if sub.plan == 'pro' %}selected{% endif %}>Pro (8 sessions · ₦45,000)</option>
+                      <option value="max" {% if sub.plan == 'max' %}selected{% endif %}>Max (12 sessions · ₦65,000)</option>
+                    </select>
+
+                    <button type="submit" class="tp-btn tp-btn--confirm tp-btn--sm">Activate</button>
+
+                    <button type="submit" formaction="{% url 'therapist_subscription_action' sub.id %}"
+                            onclick="this.form.action.value='reject';"
+                            class="tp-btn tp-btn--cancel tp-btn--sm">Decline</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- ── 3. Flagged High-Risk Patients ── -->
+    <section class="tp-card">
+      <div class="tp-card-header">
+        <h2 class="tp-card-title">🚩 Flagged High-Risk Patients</h2>
+        <span class="tp-card-count">{{ flagged_profiles|length }}</span>
+      </div>
+
+      {% if flagged_profiles %}
+        <div class="tp-table-wrap">
+          <table class="tp-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Safety</th>
+                <th>Need</th>
+                <th>Flagged</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in flagged_profiles %}
+                <tr>
+                  <td class="tp-td-bold">{{ p.display_name }}</td>
+                  <td>{{ p.user.email }}</td>
+                  <td>
+                    <span class="tp-badge tp-badge--danger">{{ p.get_safety_status_display }}</span>
+                  </td>
+                  <td>{{ p.get_immediate_need_display }}</td>
+                  <td class="tp-td-muted">{{ p.flagged_at|date:"M j, g:i A" }}</td>
+                  <td>
+                    <a href="{% url 'therapist_patient_detail' p.user.id %}" class="tp-btn tp-btn--sm tp-btn--outline">Clinical File →</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="tp-empty">
+          <p>No patients flagged as high-risk at this time. ✓</p>
+        </div>
+      {% endif %}
+    </section>
+
+    <!-- ── 4. Appointment Requests & Native Scheduling ── -->
+    <section class="tp-card">
+      <div class="tp-card-header">
+        <h2 class="tp-card-title">📋 Scheduled Appointments & Session Management</h2>
+        <span class="tp-card-count">{{ upcoming_appointments|length }}</span>
+      </div>
+
+      {% if upcoming_appointments %}
+        <div class="tp-table-wrap">
+          <table class="tp-table">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Session Date & Slot</th>
+                <th>Type / Concern</th>
+                <th>Status</th>
+                <th>Meeting Link & Clinical Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for appt in upcoming_appointments %}
+                <tr>
+                  <td>
+                    <a href="{% url 'therapist_patient_detail' appt.user.id %}" class="tp-link">
+                      {{ appt.user.email }}
+                    </a>
+                    <span style="display:block;font-size:0.72rem;color:var(--text-subtle);">
+                      Quota left: {{ appt.user.sessions_remaining }} session{{ appt.user.sessions_remaining|pluralize }}
+                    </span>
+                  </td>
+                  <td>
+                    <strong style="color:var(--text-primary);display:block;">
+                      📅 {{ appt.appointment_date|date:"D, M j, Y" }}
+                    </strong>
+                    <span style="font-size:0.78rem;color:var(--accent);">
+                      ⏰ {{ appt.appointment_time|time:"g:i A" }} – {{ appt.end_time|time:"g:i A" }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="tp-badge tp-badge--ok" style="font-size:0.72rem;">{{ appt.get_support_type_display }}</span>
+                    {% if appt.presenting_concern %}
+                      <p style="font-size:0.75rem;color:var(--text-muted);margin:0.25rem 0 0;max-width:240px;">
+                        "{{ appt.presenting_concern|truncatechars:70 }}"
+                      </p>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="tp-badge tp-badge--{{ appt.status }}">{{ appt.get_status_display }}</span>
+                  </td>
+                  <td>
+                    <div style="display:flex;flex-direction:column;gap:0.4rem;">
+                      {% if appt.status == "pending" %}
+                        <!-- Confirm Form with Meeting Link -->
+                        <form method="post" action="{% url 'therapist_appointment_action' appt.id %}" style="display:flex;gap:0.35rem;align-items:center;">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="confirm">
+                          <input type="hidden" name="next" value="therapist_dashboard">
+                          <input type="url" name="meeting_link" placeholder="Paste Meet/Zoom URL" required
+                                 value="{{ appt.meeting_link }}"
+                                 style="padding:0.3rem 0.5rem;background:#111827;border:1px solid var(--border);border-radius:4px;color:#fff;font-size:0.75rem;width:160px;">
+                          <button type="submit" class="tp-btn tp-btn--confirm tp-btn--sm">Confirm & Attach Link</button>
+                        </form>
+
+                        <!-- Decline / Refund Form -->
+                        <form method="post" action="{% url 'therapist_appointment_action' appt.id %}">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="cancel">
+                          <input type="hidden" name="next" value="therapist_dashboard">
+                          <button type="submit" class="tp-btn tp-btn--cancel tp-btn--sm"
+                                  onclick="return confirm('Decline this appointment? 1 session will be refunded to the client.');">
+                            Decline & Refund Session
+                          </button>
+                        </form>
+
+                      {% elif appt.status == "confirmed" %}
+                        <div style="font-size:0.78rem;margin-bottom:0.3rem;">
+                          {% if appt.meeting_link %}
+                            <a href="{{ appt.meeting_link }}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);text-decoration:underline;">
+                              🔗 {{ appt.meeting_link|truncatechars:28 }}
+                            </a>
+                          {% else %}
+                            <span style="color:var(--text-subtle);">No link attached</span>
+                          {% endif %}
+                        </div>
+
+                        <!-- Mark Completed with Therapist Notes Form -->
+                        <details style="font-size:0.75rem;">
+                          <summary style="cursor:pointer;color:#60a5fa;font-weight:600;">✓ Mark Completed (Add Notes)</summary>
+                          <form method="post" action="{% url 'therapist_appointment_action' appt.id %}" style="margin-top:0.4rem;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="completed">
+                            <input type="hidden" name="next" value="therapist_dashboard">
+                            <textarea name="therapist_notes" placeholder="Private clinical session notes (never seen by client)..." rows="2"
+                                      style="width:100%;padding:0.4rem;background:#111827;border:1px solid var(--border);border-radius:4px;color:#fff;font-size:0.75rem;margin-bottom:0.3rem;"></textarea>
+                            <button type="submit" class="tp-btn tp-btn--primary tp-btn--sm">Mark Completed</button>
+                          </form>
+                        </details>
+
+                        <!-- Cancel and Refund -->
+                        <form method="post" action="{% url 'therapist_appointment_action' appt.id %}">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="cancel">
+                          <input type="hidden" name="next" value="therapist_dashboard">
+                          <button type="submit" class="tp-btn tp-btn--cancel tp-btn--sm"
+                                  onclick="return confirm('Cancel this session? 1 session will be refunded to patient.');">
+                            Cancel & Refund Quota
+                          </button>
+                        </form>
+
+                      {% elif appt.status == "completed" %}
+                        <span style="font-size:0.75rem;color:#10b981;font-weight:600;">✓ Session Completed</span>
+                        {% if appt.therapist_notes %}
+                          <span style="font-size:0.72rem;color:var(--text-subtle);display:block;">Notes recorded</span>
+                        {% endif %}
+
+                      {% elif appt.status == "cancelled" %}
+                        <span style="font-size:0.75rem;color:var(--text-subtle);">Cancelled / Refunded</span>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="tp-empty">
+          <p>No pending appointment requests at this time.</p>
+        </div>
+      {% endif %}
+    </section>
+
+  </div>
+</div>
+{% endblock %}

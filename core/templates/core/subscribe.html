@@ -1,0 +1,661 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Care Plans & Membership — COEUS{% endblock %}
+
+{% block extra_head %}
+<style>
+  .sub-page {
+    min-height: 100vh;
+    padding: 3rem 1.25rem 5rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .sub-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+  .sub-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 2.3rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    font-weight: 800;
+  }
+  .sub-sub {
+    color: var(--text-muted);
+    font-size: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .sub-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    margin-bottom: 2rem;
+    transition: color 0.15s;
+  }
+  .sub-back:hover {
+    color: var(--accent);
+  }
+
+  /* Active banner */
+  .sub-active-banner {
+    background: linear-gradient(135deg, rgba(45, 212, 191, 0.12) 0%, rgba(13, 18, 32, 0.9) 100%);
+    border: 1px solid rgba(45, 212, 191, 0.35);
+    border-radius: var(--radius);
+    padding: 1.5rem 1.75rem;
+    margin-bottom: 2.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+  }
+  .sub-active-info h3 {
+    font-size: 1.15rem;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+  }
+  .sub-active-info p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  /* Grid of plans */
+  .sub-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+  }
+  .plan-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2rem 1.75rem;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .plan-card:hover {
+    border-color: rgba(45, 212, 191, 0.4);
+    transform: translateY(-2px);
+  }
+  .plan-card--popular {
+    border-color: var(--accent);
+    background: linear-gradient(180deg, rgba(45, 212, 191, 0.05) 0%, var(--bg-card) 40%);
+    box-shadow: 0 10px 30px -10px rgba(45, 212, 191, 0.15);
+  }
+  .plan-badge {
+    position: absolute;
+    top: -12px;
+    right: 20px;
+    background: var(--accent);
+    color: #FFFFFF;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 0.25rem 0.75rem;
+    border-radius: 50px;
+  }
+  .plan-name {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+  }
+  .plan-tagline {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    min-height: 2.4rem;
+    margin-bottom: 1.25rem;
+  }
+  .plan-price-wrap {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .plan-currency {
+    font-size: 1.2rem;
+    vertical-align: top;
+    color: var(--text-muted);
+  }
+  .plan-price {
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+  .plan-period {
+    color: var(--text-subtle);
+    font-size: 0.85rem;
+  }
+  .plan-features {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2rem 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .plan-features li {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+  .plan-features li::before {
+    content: "✓";
+    color: var(--accent);
+    font-weight: bold;
+  }
+
+  /* Payment Section & Tabs */
+  .payment-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2.25rem 2rem;
+  }
+  .payment-section h3 {
+    font-size: 1.25rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+  }
+  .payment-section p {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+  }
+  .pay-tabs {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+  }
+  .pay-tab-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    padding: 0.65rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .pay-tab-btn:hover {
+    color: var(--text-primary);
+  }
+  .pay-tab-btn--active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .pay-tab-content {
+    display: none;
+  }
+  .pay-tab-content--active {
+    display: block;
+  }
+
+  .badge-coming-soon {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 50px;
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+  }
+
+  .bank-box {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+  .bank-item-label {
+    font-size: 0.75rem;
+    color: var(--text-subtle);
+    letter-spacing: 0.02em;
+  }
+  .bank-item-val {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-top: 0.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .btn-copy {
+    background: rgba(45, 212, 191, 0.1);
+    color: var(--accent);
+    border: 1px solid rgba(45, 212, 191, 0.25);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    cursor: pointer;
+  }
+
+  .plan-selector-box {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .plan-option-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 0.6rem;
+    transition: all 0.15s;
+    background: rgba(0, 0, 0, 0.2);
+  }
+  .plan-option-label:last-child {
+    margin-bottom: 0;
+  }
+  .plan-option-label:hover {
+    border-color: rgba(45, 212, 191, 0.4);
+  }
+  .plan-option-label:has(input:checked) {
+    border-color: var(--accent);
+    background: rgba(45, 212, 191, 0.08);
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="sub-page">
+
+  <a href="{% url 'dashboard' %}" class="sub-back">← Back to dashboard</a>
+
+  <div class="sub-header">
+    <h1 class="sub-title">Choose your care plan</h1>
+    <p class="sub-sub">
+      Select a therapy membership with licensed clinicians. All plans include private reflection journals, mood tracking, and personal safety tools.
+    </p>
+  </div>
+
+  <!-- Active Subscription Banner -->
+  {% if has_active_sub %}
+    <div class="sub-active-banner">
+      <div class="sub-active-info">
+        <h3>You have an active plan: {{ active_sub.get_plan_display }}</h3>
+        <p>
+          Status: <strong style="color:var(--accent);">Active</strong> ·
+          Sessions remaining: <strong style="color:var(--accent);">{{ active_sub.sessions_remaining }} of {{ active_sub.sessions_allocated }}</strong> ·
+          {% if active_sub.end_date %}Renews/Expires: {{ active_sub.end_date|date:"F j, Y" }}{% endif %}
+          · Reference: <code>{{ active_sub.reference }}</code>
+        </p>
+      </div>
+      <div style="display:flex;gap:0.75rem;align-items:center;">
+        <a href="{% url 'appointment_book' %}" class="btn btn-primary" style="color:#FFFFFF !important;">📅 Book therapy session →</a>
+      </div>
+    </div>
+  {% elif pending_sub %}
+    <div class="alert alert-warning" style="margin-bottom:2.5rem;padding:1.25rem;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:var(--radius-sm);">
+      <div>
+        <strong style="color:#fbbf24;">⏳ Transfer pending confirmation (Ref: {{ pending_sub.reference }})</strong>
+        <p style="margin-top:0.35rem;font-size:0.85rem;color:var(--text-muted);">
+          Your bank transfer for the <strong>{{ pending_sub.get_plan_display }}</strong> (₦{{ pending_sub.amount|floatformat:0 }}) has been received and is being verified. Your therapist will confirm your payment and credit your session quota shortly.
+        </p>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Plans Grid (Strictly 3 Plans: Basic, Pro, Max) -->
+  <div class="sub-grid">
+
+    <!-- Basic Plan (₦25,000 / 4 sessions) -->
+    <div class="plan-card" id="card-basic">
+      <h3 class="plan-name">Basic</h3>
+      <p class="plan-tagline">Four private conversations a month for steady, personal support.</p>
+      <div class="plan-price-wrap">
+        <span class="plan-currency">₦</span>
+        <span class="plan-price">25,000</span>
+        <span class="plan-period">/ month · 4 sessions</span>
+      </div>
+      <ul class="plan-features">
+        <li><strong>4 individual sessions a month</strong></li>
+        <li><strong>Direct slot-based booking with therapists</strong></li>
+        <li>Encrypted private reflection journal</li>
+        <li>Personal safety plan builder</li>
+        <li>Access to vetted clinical psychologists</li>
+      </ul>
+      <button type="button" class="btn btn-outline btn-block select-plan-btn"
+              onclick="selectPlan('basic', 25000, 'Basic Plan')"
+              style="font-weight:600;">
+        Choose Basic
+      </button>
+    </div>
+
+    <!-- Pro Plan (₦45,000 / 8 sessions) -->
+    <div class="plan-card plan-card--popular" id="card-pro">
+      <span class="plan-badge">Most recommended</span>
+      <h3 class="plan-name">Pro</h3>
+      <p class="plan-tagline">Eight private conversations a month for deeper, ongoing guidance.</p>
+      <div class="plan-price-wrap">
+        <span class="plan-currency">₦</span>
+        <span class="plan-price">45,000</span>
+        <span class="plan-period">/ month · 8 sessions</span>
+      </div>
+      <ul class="plan-features">
+        <li><strong>8 individual sessions a month</strong></li>
+        <li><strong>Twice-weekly session rhythm</strong></li>
+        <li>Priority clinician matching</li>
+        <li>Encrypted private reflection journal</li>
+        <li>Personal safety plan with direct check-ins</li>
+      </ul>
+      <button type="button" class="btn btn-primary btn-block select-plan-btn"
+              onclick="selectPlan('pro', 45000, 'Pro Plan')"
+              style="color:#FFFFFF !important;font-weight:700;">
+        Choose Pro
+      </button>
+    </div>
+
+    <!-- Max Plan (₦65,000 / 12 sessions) -->
+    <div class="plan-card" id="card-max">
+      <span class="plan-badge" style="background:var(--coeus-blue);color:#FFFFFF;">Comprehensive</span>
+      <h3 class="plan-name">Max</h3>
+      <p class="plan-tagline">Twelve private conversations a month for comprehensive, intensive care.</p>
+      <div class="plan-price-wrap">
+        <span class="plan-currency">₦</span>
+        <span class="plan-price">65,000</span>
+        <span class="plan-period">/ month · 12 sessions</span>
+      </div>
+      <ul class="plan-features">
+        <li><strong>12 individual sessions a month</strong></li>
+        <li><strong>Flexible, comprehensive scheduling</strong></li>
+        <li>Dedicated lead practitioner partnership</li>
+        <li>Encrypted private reflection journal</li>
+        <li>Full personal care toolkit access</li>
+      </ul>
+      <button type="button" class="btn btn-outline btn-block select-plan-btn"
+              onclick="selectPlan('max', 65000, 'Max Plan')"
+              style="font-weight:600;">
+        Choose Max
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Payment Checkout Section -->
+  <div class="payment-section" id="checkout-section">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+      <div>
+        <h3>Payment & checkout: <span id="selected-plan-display" style="color:var(--accent);">Basic Plan (₦25,000)</span></h3>
+        <p style="margin-bottom:0;">Select a payment method below to activate your sessions.</p>
+      </div>
+    </div>
+
+    <!-- Payment Tabs -->
+    <div class="pay-tabs">
+      <button type="button" class="pay-tab-btn pay-tab-btn--active" onclick="switchPayTab('transfer', this)">
+        🏦 Direct bank transfer
+      </button>
+      <button type="button" class="pay-tab-btn" onclick="switchPayTab('paystack', this)">
+        💳 Pay with Paystack <span class="badge-coming-soon">Coming soon</span>
+      </button>
+      <button type="button" class="pay-tab-btn" onclick="switchPayTab('test', this)">
+        ⚡ Instant test sandbox
+      </button>
+    </div>
+
+    <!-- TAB 1: Direct Bank Transfer (Primary Active Workflow) -->
+    <div id="tab-transfer" class="pay-tab-content pay-tab-content--active">
+      <p style="margin-bottom:1.25rem;">
+        Transfer directly to our designated clinical care account via your mobile banking app or USSD. Once transferred, submit your sender details below for quick verification.
+      </p>
+
+      <div class="bank-box">
+        <div>
+          <span class="bank-item-label">Bank name</span>
+          <div class="bank-item-val">{{ bank_details.bank_name|default:"Kuda Microfinance Bank" }}</div>
+        </div>
+        <div>
+          <span class="bank-item-label">Account number</span>
+          <div class="bank-item-val">
+            <span id="acc-num">{{ bank_details.account_number|default:"2019284756" }}</span>
+            <button type="button" class="btn-copy" onclick="copyAccNum()">Copy</button>
+          </div>
+        </div>
+        <div>
+          <span class="bank-item-label">Account name</span>
+          <div class="bank-item-val">{{ bank_details.account_name|default:"Diepreye Wodi / COEUS Mental Care" }}</div>
+        </div>
+        <div>
+          <span class="bank-item-label">Amount due</span>
+          <div class="bank-item-val" id="transfer-amount-display" style="color:var(--accent);">₦25,000</div>
+        </div>
+      </div>
+
+      <form method="post" action="{% url 'bank_transfer_submit' %}" style="max-width:580px;">
+        {% csrf_token %}
+
+        <!-- Explicit Plan Selector in Bank Transfer -->
+        <div class="field" style="margin-bottom:1.25rem;">
+          <label style="font-size:0.85rem;color:var(--text-muted);display:block;margin-bottom:0.5rem;font-weight:600;">
+            Select plan to activate *
+          </label>
+          <div class="plan-selector-box">
+            <label class="plan-option-label">
+              <div style="display:flex;align-items:center;gap:0.75rem;">
+                <input type="radio" name="plan" value="basic" checked onchange="onRadioPlanChange('basic', 25000, 'Basic Plan')">
+                <div>
+                  <strong style="color:#fff;font-size:0.9rem;">Basic Plan</strong>
+                  <span style="display:block;font-size:0.78rem;color:var(--text-muted);">4 Therapy Sessions</span>
+                </div>
+              </div>
+              <strong style="color:var(--accent);">₦25,000</strong>
+            </label>
+
+            <label class="plan-option-label">
+              <div style="display:flex;align-items:center;gap:0.75rem;">
+                <input type="radio" name="plan" value="pro" onchange="onRadioPlanChange('pro', 45000, 'Pro Plan')">
+                <div>
+                  <strong style="color:#fff;font-size:0.9rem;">Pro Plan</strong>
+                  <span style="display:block;font-size:0.78rem;color:var(--text-muted);">8 Therapy Sessions</span>
+                </div>
+              </div>
+              <strong style="color:var(--turquoise);">₦45,000</strong>
+            </label>
+
+            <label class="plan-option-label">
+              <div style="display:flex;align-items:center;gap:0.75rem;">
+                <input type="radio" name="plan" value="max" onchange="onRadioPlanChange('max', 65000, 'Max Plan')">
+                <div>
+                  <strong style="color:#fff;font-size:0.9rem;">Max Plan</strong>
+                  <span style="display:block;font-size:0.78rem;color:var(--text-muted);">12 Therapy Sessions</span>
+                </div>
+              </div>
+              <strong style="color:var(--coeus-blue);">₦65,000</strong>
+            </label>
+          </div>
+        </div>
+
+        <div class="field" style="margin-bottom:1rem;">
+          <label style="font-size:0.85rem;color:var(--text-muted);display:block;margin-bottom:0.35rem;">Sender account name *</label>
+          <input type="text" name="sender_name" required placeholder="The name on the bank account you sent from"
+                 style="width:100%;padding:0.65rem 0.85rem;background:#111827;border:1px solid var(--border);border-radius:6px;color:#fff;font-size:0.9rem;">
+        </div>
+
+        <div class="field" style="margin-bottom:1rem;">
+          <label style="font-size:0.85rem;color:var(--text-muted);display:block;margin-bottom:0.35rem;">Sender bank name (optional)</label>
+          <input type="text" name="sender_bank" placeholder="e.g. GTBank, Access Bank, OPay, Kuda"
+                 style="width:100%;padding:0.65rem 0.85rem;background:#111827;border:1px solid var(--border);border-radius:6px;color:#fff;font-size:0.9rem;">
+        </div>
+
+        <div class="field" style="margin-bottom:1.5rem;">
+          <label style="font-size:0.85rem;color:var(--text-muted);display:block;margin-bottom:0.35rem;">Additional notes or transaction reference (optional)</label>
+          <textarea name="notes" rows="2" placeholder="Any additional payment details..."
+                    style="width:100%;padding:0.65rem 0.85rem;background:#111827;border:1px solid var(--border);border-radius:6px;color:#fff;font-size:0.9rem;resize:none;"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%;padding:0.8rem;color:#FFFFFF !important;font-weight:700;">
+          Submit transfer details for verification →
+        </button>
+      </form>
+    </div>
+
+    <!-- TAB 2: Paystack (Coming Soon) -->
+    <div id="tab-paystack" class="pay-tab-content">
+      <div style="text-align:center;padding:2.5rem 1rem;">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem;">💳</div>
+        <h4 style="font-size:1.15rem;color:var(--text-primary);margin-bottom:0.5rem;">Automated card payments coming soon</h4>
+        <p style="color:var(--text-muted);max-width:480px;margin:0 auto 1.5rem;font-size:0.875rem;">
+          Paystack automated recurring debits are being finalized. In the meantime, please use <strong>Direct bank transfer</strong> above for quick activation.
+        </p>
+        <button type="button" class="btn btn-outline" onclick="switchPayTab('transfer', document.querySelector('.pay-tab-btn'))">
+          Use direct bank transfer →
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 3: Instant Test Sandbox -->
+    <div id="tab-test" class="pay-tab-content">
+      <div style="background:rgba(129, 140, 248, 0.08);border:1px solid rgba(129, 140, 248, 0.3);border-radius:var(--radius-sm);padding:1.5rem;max-width:580px;">
+        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.75rem;">
+          <span style="font-size:1.3rem;">⚡</span>
+          <strong style="color:#818cf8;font-size:1rem;">Developer & demo test activation</strong>
+        </div>
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.25rem;">
+          For local testing and reviewer demonstration: Click below to instantly simulate a successful subscription payment and credit therapy sessions immediately to your account.
+        </p>
+
+        <form method="post" action="{% url 'instant_test_activate' %}">
+          {% csrf_token %}
+          <div class="field" style="margin-bottom:1.25rem;">
+            <label style="font-size:0.85rem;color:var(--text-muted);display:block;margin-bottom:0.5rem;font-weight:600;">
+              Select plan to simulate *
+            </label>
+            <div class="plan-selector-box">
+              <label class="plan-option-label">
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                  <input type="radio" name="plan" value="basic" checked id="test-radio-basic">
+                  <div>
+                    <strong style="color:#fff;font-size:0.9rem;">Basic Plan</strong>
+                    <span style="display:block;font-size:0.78rem;color:var(--text-muted);">Allocate 4 Therapy Sessions</span>
+                  </div>
+                </div>
+                <strong style="color:var(--accent);">₦25,000</strong>
+              </label>
+
+              <label class="plan-option-label">
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                  <input type="radio" name="plan" value="pro" id="test-radio-pro">
+                  <div>
+                    <strong style="color:#fff;font-size:0.9rem;">Pro Plan</strong>
+                    <span style="display:block;font-size:0.78rem;color:var(--text-muted);">Allocate 8 Therapy Sessions</span>
+                  </div>
+                </div>
+                <strong style="color:var(--turquoise);">₦45,000</strong>
+              </label>
+
+              <label class="plan-option-label">
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                  <input type="radio" name="plan" value="max" id="test-radio-max">
+                  <div>
+                    <strong style="color:#fff;font-size:0.9rem;">Max Plan</strong>
+                    <span style="display:block;font-size:0.78rem;color:var(--text-muted);">Allocate 12 Therapy Sessions</span>
+                  </div>
+                </div>
+                <strong style="color:var(--coeus-blue);">₦65,000</strong>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="background:#818cf8;color:#0d0d0d;border-color:#818cf8;font-weight:700;width:100%;padding:0.8rem;">
+            ⚡ Instant activate selected plan →
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  function switchPayTab(tabKey, btn) {
+    document.querySelectorAll('.pay-tab-content').forEach(el => el.classList.remove('pay-tab-content--active'));
+    document.querySelectorAll('.pay-tab-btn').forEach(el => el.classList.remove('pay-tab-btn--active'));
+
+    const target = document.getElementById('tab-' + tabKey);
+    if (target) target.classList.add('pay-tab-content--active');
+    btn.classList.add('pay-tab-btn--active');
+  }
+
+  function selectPlan(planKey, price, planName) {
+    // Scroll to checkout
+    const checkout = document.getElementById('checkout-section');
+    if (checkout) checkout.scrollIntoView({ behavior: 'smooth' });
+
+    // Update displays
+    document.getElementById('selected-plan-display').innerText = `${planName} (₦${price.toLocaleString()})`;
+    document.getElementById('transfer-amount-display').innerText = `₦${price.toLocaleString()}`;
+
+    // Update radios in transfer form
+    const radios = document.querySelectorAll('input[name="plan"]');
+    radios.forEach(r => {
+      if (r.value === planKey) r.checked = true;
+    });
+
+    // Also update test radio
+    const testRadio = document.getElementById('test-radio-' + planKey);
+    if (testRadio) testRadio.checked = true;
+  }
+
+  function onRadioPlanChange(planKey, price, planName) {
+    document.getElementById('selected-plan-display').innerText = `${planName} (₦${price.toLocaleString()})`;
+    document.getElementById('transfer-amount-display').innerText = `₦${price.toLocaleString()}`;
+
+    // Synchronize test radio
+    const testRadio = document.getElementById('test-radio-' + planKey);
+    if (testRadio) testRadio.checked = true;
+  }
+
+  function copyAccNum() {
+    const text = document.getElementById('acc-num').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Account number copied: ' + text);
+    });
+  }
+
+  // Pre-select plan if passed in query string (?plan=pro or ?plan=max or ?plan=basic)
+  document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const planParam = urlParams.get('plan');
+    if (planParam === 'pro') {
+      selectPlan('pro', 45000, 'Pro Plan');
+    } else if (planParam === 'max') {
+      selectPlan('max', 65000, 'Max Plan');
+    } else if (planParam === 'basic') {
+      selectPlan('basic', 25000, 'Basic Plan');
+    }
+  });
+</script>
+{% endblock %}

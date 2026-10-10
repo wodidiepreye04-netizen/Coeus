@@ -1,0 +1,150 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Check In — COEUS{% endblock %}
+
+{% block body %}
+<div class="onboarding-page">
+  <div class="onboarding-card">
+
+    <a href="{% url 'onboarding_about' %}" class="onboarding-back">← Back</a>
+
+    <h1 class="onboarding-title">How are you feeling?</h1>
+    <p class="onboarding-sub">Help us understand where you are right now</p>
+
+    <div class="onboarding-divider"></div>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <!-- Mood -->
+      <div class="field">
+        <label class="field-label-lg">How are you feeling right now?</label>
+        <div class="mood-scale">
+          {% for value, emoji in mood_options %}
+            <label class="mood-option">
+              <input type="radio" name="mood_score" value="{{ value }}"
+                {% if form.mood_score.value == value %}checked{% endif %}>
+              <span class="mood-emoji">{{ emoji }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        <div class="mood-labels">
+          <span>Very Bad</span>
+          <span>Struggling</span>
+          <span>Okay</span>
+          <span>Good</span>
+          <span>Great</span>
+        </div>
+        {% if form.mood_score.errors %}
+          <span class="field-error">{{ form.mood_score.errors.0 }}</span>
+        {% endif %}
+      </div>
+
+      <!-- Professional history -->
+      <div class="field">
+        <label class="field-label-lg">Have you worked with a mental health professional before?</label>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="has_seen_professional" value="yes"
+              {% if form.has_seen_professional.value == "yes" %}checked{% endif %}>
+            <span>Yes</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="has_seen_professional" value="no"
+              {% if form.has_seen_professional.value == "no" %}checked{% endif %}>
+            <span>No</span>
+          </label>
+        </div>
+        {% if form.has_seen_professional.errors %}
+          <span class="field-error">{{ form.has_seen_professional.errors.0 }}</span>
+        {% endif %}
+      </div>
+
+      <!-- Current treatment -->
+      <div class="field">
+        <label class="field-label-lg">Are you currently receiving mental health support or treatment? <span class="field-optional">(optional)</span></label>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="current_treatment" value="yes"
+              {% if form.current_treatment.value == "yes" %}checked{% endif %}>
+            <span>Yes</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="current_treatment" value="no"
+              {% if form.current_treatment.value == "no" %}checked{% endif %}>
+            <span>No</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="current_treatment" value="prefer_not"
+              {% if form.current_treatment.value == "prefer_not" %}checked{% endif %}>
+            <span>Prefer not to say</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="onboarding-divider"></div>
+
+      <!-- Reasons -->
+      <div class="field">
+        <label class="field-label-lg">What's bringing you to COEUS? <span class="field-optional">(select all that apply)</span></label>
+        <div class="checkbox-group">
+          {% for value, label in reason_choices %}
+            <label class="checkbox-option">
+              <input type="checkbox" name="reasons" value="{{ value }}"
+                {% if form.reasons.value and value in form.reasons.value %}checked{% endif %}>
+              <span>{{ label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        {% if form.reasons.errors %}
+          <span class="field-error">{{ form.reasons.errors.0 }}</span>
+        {% endif %}
+      </div>
+
+      <!-- Safety -->
+      <div class="field">
+        <label class="field-label-lg">Do you feel safe right now?</label>
+        <div class="radio-group">
+          {% for value, label in safety_choices %}
+            <label class="radio-option">
+              <input type="radio" name="safety_status" value="{{ value }}"
+                {% if form.safety_status.value == value %}checked{% endif %}>
+              <span>{{ label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        {% if form.safety_status.errors %}
+          <span class="field-error">{{ form.safety_status.errors.0 }}</span>
+        {% endif %}
+      </div>
+
+      <!-- Immediate need -->
+      <div class="field">
+        <label class="field-label-lg">What do you need most right now?</label>
+        <div class="radio-group">
+          {% for value, label in need_choices %}
+            <label class="radio-option">
+              <input type="radio" name="immediate_need" value="{{ value }}"
+                {% if form.immediate_need.value == value %}checked{% endif %}>
+              <span>{{ label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        {% if form.immediate_need.errors %}
+          <span class="field-error">{{ form.immediate_need.errors.0 }}</span>
+        {% endif %}
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top: 1.5rem;">Start Chatting</button>
+    </form>
+
+    <div class="onboarding-progress">
+      <span class="onboarding-dot"></span>
+      <span class="onboarding-dot"></span>
+      <span class="onboarding-dot onboarding-dot--active"></span>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

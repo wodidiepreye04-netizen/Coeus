@@ -1,0 +1,260 @@
+{% extends "core/therapist/base.html" %}
+
+{% block title %}{{ patient.email }} — COEUS Therapist{% endblock %}
+
+{% block content %}
+<div class="tp-page">
+
+  <!-- ── Breadcrumb ── -->
+  <div class="tp-breadcrumb">
+    <a href="{% url 'therapist_patients' %}">← Patients</a>
+  </div>
+
+  <!-- ── Patient header ── -->
+  <div class="tp-patient-header">
+    <div>
+      <h1 class="tp-page-title">
+        {% if profile %}{{ profile.display_name }}{% else %}{{ patient.email }}{% endif %}
+      </h1>
+      <p class="tp-page-sub">{{ patient.email }}</p>
+    </div>
+    {% if profile and profile.risk_level == "high" %}
+      <span class="tp-badge tp-badge--danger tp-badge--lg">⚠ High-Risk</span>
+    {% endif %}
+  </div>
+
+  <div class="tp-detail-grid">
+
+    <!-- ══ LEFT — Clinical Data ══ -->
+    <div class="tp-detail-col">
+
+      <!-- Subscription Status -->
+      <section class="tp-card" style="margin-bottom: 1.5rem;">
+        <h2 class="tp-card-title">💳 Subscription Plan & Session Quota</h2>
+        {% if has_active_subscription %}
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; padding:0.5rem 0;">
+            <div>
+              <span class="tp-badge tp-badge--ok" style="font-size:0.875rem; padding:0.25rem 0.65rem;">Active Plan</span>
+              <h3 style="font-size:1.15rem; font-weight:700; color:var(--deep-teal); margin:0.35rem 0 0.15rem;">{{ active_subscription.get_plan_display }}</h3>
+              <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">
+                ₦{{ active_subscription.amount|floatformat:0 }} · Paid via {{ active_subscription.get_payment_method_display }}
+              </p>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-size:0.75rem; color:var(--mist-blue); text-transform:uppercase; letter-spacing:0.05em; display:block;">Session Quota</span>
+              <strong style="font-size:1rem; color:var(--deep-teal);">🎟️ {{ sessions_remaining }} of {{ sessions_allocated }} sessions left</strong>
+              <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin-top:0.2rem;">
+                Active until {{ active_subscription.end_date|date:"F j, Y" }}
+              </span>
+            </div>
+          </div>
+        {% else %}
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem;">
+            <div>
+              <span class="tp-badge tp-badge--warn">No Active Subscription</span>
+              <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.35rem;">This client does not have an active care plan (0 therapy sessions allocated). They cannot book until subscribed.</p>
+            </div>
+          </div>
+        {% endif %}
+      </section>
+
+      <!-- Intake / Onboarding -->
+      {% if profile %}
+        <section class="tp-card">
+          <h2 class="tp-card-title">📋 Intake Data</h2>
+          <div class="tp-data-grid">
+            <div class="tp-data-item">
+              <span class="tp-data-label">Display Name</span>
+              <span class="tp-data-value">{{ profile.display_name }}</span>
+            </div>
+            <div class="tp-data-item">
+              <span class="tp-data-label">Age</span>
+              <span class="tp-data-value">{{ profile.age }}</span>
+            </div>
+            <div class="tp-data-item">
+              <span class="tp-data-label">Gender</span>
+              <span class="tp-data-value">{{ profile.get_gender_display|default:"Not specified" }}</span>
+            </div>
+            <div class="tp-data-item">
+              <span class="tp-data-label">Country</span>
+              <span class="tp-data-value">{{ profile.country }}</span>
+            </div>
+            <div class="tp-data-item">
+              <span class="tp-data-label">Initial Mood Score</span>
+              <span class="tp-data-value">{{ profile.mood_score }} / 5</span>
+            </div>
+            <div class="tp-data-item">
+              <span class="tp-data-label">Seen a Professional</span>
+              <span class="tp-data-value">{{ profile.has_seen_professional|yesno:"Yes,No" }}</span>
+            </div>
+            <div class="tp-data-item">
+              <span class="tp-data-label">Current Treatment</span>
+              <span class="tp-data-value">{{ profile.get_current_treatment_display|default:"—" }}</span>
+            </div>
+            <div class="tp-data-item">
+              <span class="tp-data-label">Safety Status</span>
+              <span class="tp-data-value">
+                {% if profile.safety_status == "unsafe" or profile.safety_status == "unsure" %}
+                  <span class="tp-badge tp-badge--danger">{{ profile.get_safety_status_display }}</span>
+                {% else %}
+                  {{ profile.get_safety_status_display }}
+                {% endif %}
+              </span>
+            </div>
+            <div class="tp-data-item">
+              <span class="tp-data-label">Immediate Need</span>
+              <span class="tp-data-value">{{ profile.get_immediate_need_display }}</span>
+            </div>
+          </div>
+
+          {% if profile.reasons %}
+            <div class="tp-data-section">
+              <span class="tp-data-label">Reasons for Seeking Help</span>
+              <ul class="tp-tag-list">
+                {% for reason in profile.reasons %}
+                  <li class="tp-tag">{{ reason }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          <div class="tp-data-section tp-data-meta">
+            <span>Onboarding completed: {{ profile.created_at|date:"M j, Y \\a\\t g:i A" }}</span>
+            {% if profile.flagged_at %}
+              <span>· Flagged: {{ profile.flagged_at|date:"M j, Y \\a\\t g:i A" }}</span>
+            {% endif %}
+          </div>
+        </section>
+      {% else %}
+        <section class="tp-card">
+          <div class="tp-empty"><p>No intake data available — onboarding not completed.</p></div>
+        </section>
+      {% endif %}
+
+      <!-- Mood History -->
+      <section class="tp-card">
+        <h2 class="tp-card-title">😊 Mood History (Last 14 Days)</h2>
+        {% if mood_display %}
+          <div class="tp-mood-list">
+            {% for m in mood_display %}
+              <div class="tp-mood-row">
+                <span class="tp-mood-date">{{ m.date|date:"M j" }}</span>
+                <span class="tp-mood-emoji">{{ m.emoji }}</span>
+                <span class="tp-mood-label">{{ m.label }}</span>
+                <span class="tp-mood-score">{{ m.score }}/5</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="tp-empty"><p>No mood entries recorded yet.</p></div>
+        {% endif %}
+      </section>
+
+      <!-- Appointments -->
+      <section class="tp-card">
+        <h2 class="tp-card-title">🗓️ Appointment History & Clinical Records</h2>
+        {% if appointments %}
+          <div class="tp-table-wrap">
+            <table class="tp-table">
+              <thead>
+                <tr>
+                  <th>Session Date & Slot</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Concern & Details</th>
+                  <th>Meeting Link / Clinician Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for appt in appointments %}
+                  <tr>
+                    <td>
+                      {% if appt.appointment_date %}
+                        <strong>{{ appt.appointment_date|date:"D, M j, Y" }}</strong>
+                        <span style="display:block;font-size:0.75rem;color:var(--accent);">
+                          {{ appt.appointment_time|time:"g:i A" }} – {{ appt.end_time|time:"g:i A" }}
+                        </span>
+                      {% else %}
+                        <span class="tp-td-muted">{{ appt.created_at|date:"M j, Y" }}</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ appt.get_support_type_display }}</td>
+                    <td><span class="tp-badge tp-badge--{{ appt.status }}">{{ appt.get_status_display }}</span></td>
+                    <td>
+                      <p style="font-size:0.8rem;margin:0;color:var(--text-muted);max-width:200px;">
+                        {{ appt.presenting_concern|default:"—" }}
+                      </p>
+                    </td>
+                    <td>
+                      {% if appt.meeting_link %}
+                        <div style="margin-bottom:0.3rem;">
+                          <a href="{{ appt.meeting_link }}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:0.78rem;text-decoration:underline;">
+                            🔗 Join Call
+                          </a>
+                        </div>
+                      {% endif %}
+                      {% if appt.therapist_notes %}
+                        <div style="font-size:0.75rem;color:var(--text-primary);background:rgba(255,255,255,0.03);padding:0.3rem 0.5rem;border-radius:4px;border:1px solid var(--border);">
+                          <strong>Clinician Note:</strong> {{ appt.therapist_notes }}
+                        </div>
+                      {% elif not appt.meeting_link %}
+                        <span class="tp-td-muted">—</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="tp-empty"><p>No appointments recorded for this patient.</p></div>
+        {% endif %}
+      </section>
+
+    </div>
+
+    <!-- ══ RIGHT — Session Notes ══ -->
+    <div class="tp-detail-col">
+
+      <section class="tp-card tp-card--sticky">
+        <h2 class="tp-card-title">🔒 Session Notes</h2>
+        <p class="tp-card-sub">Private — only visible to therapists.</p>
+
+        <!-- Add new note -->
+        <form method="post" class="tp-note-form">
+          {% csrf_token %}
+          {% if note_error %}
+            <div class="alert alert-error" style="margin-bottom:0.75rem;">⚠ {{ note_error }}</div>
+          {% endif %}
+          <textarea name="note_content" class="tp-note-textarea" rows="4"
+            placeholder="Write a clinical note for this patient…"></textarea>
+          <button type="submit" class="tp-btn tp-btn--primary" style="width:100%;margin-top:0.5rem;">
+            Save Note
+          </button>
+        </form>
+
+        <!-- Existing notes -->
+        {% if notes %}
+          <div class="tp-notes-list">
+            {% for note in notes %}
+              <div class="tp-note-item">
+                <div class="tp-note-meta">
+                  <span class="tp-note-author">{{ note.therapist.email }}</span>
+                  <span class="tp-note-date">{{ note.created_at|date:"M j, Y · g:i A" }}</span>
+                </div>
+                <p class="tp-note-content">{{ note.content }}</p>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="tp-empty" style="margin-top:1rem;">
+            <p>No session notes yet.</p>
+          </div>
+        {% endif %}
+      </section>
+
+    </div>
+
+  </div>
+</div>
+{% endblock %}

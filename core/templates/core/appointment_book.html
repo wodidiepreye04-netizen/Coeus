@@ -1,0 +1,344 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Book a Therapy Session — COEUS{% endblock %}
+
+{% block extra_head %}
+<style>
+  .book-page {
+    min-height: 100vh;
+    padding: 3rem 1.25rem 5rem;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .book-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2.25rem 2rem;
+    box-shadow: var(--shadow);
+  }
+  .book-header {
+    margin-bottom: 2rem;
+  }
+  .book-title {
+    font-family: 'Fraunces', serif;
+    font-size: 2rem;
+    color: var(--text-primary);
+    margin-bottom: 0.4rem;
+  }
+  .book-sub {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+  }
+  .book-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
+    transition: color 0.15s;
+  }
+  .book-back:hover {
+    color: var(--accent);
+  }
+
+  .quota-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 50px;
+    background: rgba(45, 212, 191, 0.12);
+    border: 1px solid rgba(45, 212, 191, 0.3);
+    color: var(--accent);
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+  }
+
+  .slot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.6rem;
+    margin-top: 0.6rem;
+  }
+  .slot-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.7rem 0.5rem;
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .slot-btn:hover {
+    border-color: rgba(45, 212, 191, 0.5);
+    background: rgba(45, 212, 191, 0.05);
+  }
+  .slot-btn--selected {
+    background: var(--accent) !important;
+    color: #0d0d0d !important;
+    font-weight: 700;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 12px rgba(45, 212, 191, 0.35);
+  }
+
+  .loading-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 0.4rem;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="book-page">
+
+  <a href="{% url 'dashboard' %}" class="book-back">← Back to Sanctuary Dashboard</a>
+
+  <div class="book-card">
+
+    <div class="book-header">
+      <div class="quota-badge">
+        <span>🎟️</span>
+        <span>{{ sessions_remaining }} Session{{ sessions_remaining|pluralize }} Remaining in Your Quota</span>
+      </div>
+      <h1 class="book-title">Schedule Therapy Session</h1>
+      <p class="book-sub">Select your clinician, choose an open date, and reserve a private 1-hour slot.</p>
+    </div>
+
+    {% if sessions_remaining <= 0 %}
+      <div style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:var(--radius-sm);padding:1.5rem;text-align:center;margin-bottom:1.5rem;">
+        <h3 style="color:#fbbf24;margin-bottom:0.5rem;font-size:1.15rem;">No Therapy Sessions Remaining</h3>
+        <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1.25rem;">
+          You have used all the sessions allocated in your plan. Renew or upgrade your membership to book your next session.
+        </p>
+        <a href="{% url 'subscribe' %}" class="btn btn-primary" style="color:#FFFFFF !important;">
+          Upgrade / Renew Membership →
+        </a>
+      </div>
+    {% else %}
+
+      <form method="post" id="booking-form" novalidate>
+        {% csrf_token %}
+
+        <!-- Hidden input holding selected slot time -->
+        <input type="hidden" name="appointment_time" id="appointment_time" required>
+
+        <!-- 1. Clinician Selection -->
+        <div class="field" style="margin-bottom:1.5rem;">
+          <label style="font-size:0.875rem;font-weight:600;color:var(--text-primary);display:block;margin-bottom:0.4rem;">
+            1. Select Therapist *
+          </label>
+          <div class="select-wrapper">
+            <select name="therapist" id="therapist-select" required onchange="loadAvailableSlots()"
+                    style="width:100%;padding:0.75rem 0.9rem;background:#111827;border:1px solid var(--border);border-radius:var(--radius-sm);color:#fff;font-size:0.9rem;">
+              <option value="">— Choose a licensed therapist —</option>
+              {% for t in therapists %}
+                <option value="{{ t.id }}" {% if forloop.first %}selected{% endif %}>
+                  {{ t.get_full_name|default:t.email }} ({% if t.role == 'therapist' %}Licensed Clinician{% else %}Clinical Lead{% endif %})
+                </option>
+              {% empty %}
+                <option value="" disabled>No therapists currently assigned</option>
+              {% endfor %}
+            </select>
+          </div>
+          <span style="font-size:0.75rem;color:var(--text-subtle);margin-top:0.25rem;display:block;">
+            All therapists on COEUS are accredited mental health practitioners.
+          </span>
+        </div>
+
+        <!-- 2. Date Selection -->
+        <div class="field" style="margin-bottom:1.5rem;">
+          <label style="font-size:0.875rem;font-weight:600;color:var(--text-primary);display:block;margin-bottom:0.4rem;">
+            2. Choose Date *
+          </label>
+          <input type="date" name="appointment_date" id="appointment_date" required onchange="loadAvailableSlots()"
+                 style="width:100%;padding:0.75rem 0.9rem;background:#111827;border:1px solid var(--border);border-radius:var(--radius-sm);color:#fff;font-size:0.9rem;">
+          <span style="font-size:0.75rem;color:var(--text-subtle);margin-top:0.25rem;display:block;">
+            Pick any upcoming day to see clinician's available 1-hour windows.
+          </span>
+        </div>
+
+        <!-- 3. Slot Selection -->
+        <div class="field" style="margin-bottom:1.5rem;">
+          <label style="font-size:0.875rem;font-weight:600;color:var(--text-primary);display:block;margin-bottom:0.4rem;">
+            3. Available 1-Hour Time Slots *
+          </label>
+
+          <div id="slots-container" style="min-height:50px;">
+            <p id="slots-prompt" style="font-size:0.85rem;color:var(--text-muted);font-style:italic;">
+              Please select a therapist and date above to view real-time open slots.
+            </p>
+            <div id="slot-buttons" class="slot-grid" style="display:none;"></div>
+          </div>
+        </div>
+
+        <!-- 4. Support Type -->
+        <div class="field" style="margin-bottom:1.5rem;">
+          <label style="font-size:0.875rem;font-weight:600;color:var(--text-primary);display:block;margin-bottom:0.4rem;">
+            4. Type of Support
+          </label>
+          <div class="select-wrapper">
+            <select name="support_type"
+                    style="width:100%;padding:0.75rem 0.9rem;background:#111827;border:1px solid var(--border);border-radius:var(--radius-sm);color:#fff;font-size:0.9rem;">
+              <option value="therapy" selected>Individual Therapy Session</option>
+              <option value="crisis">Urgent Support & Grounding</option>
+              <option value="checkin">General Mental Wellness Check-in</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 5. Presenting Concern -->
+        <div class="field" style="margin-bottom:1.75rem;">
+          <label style="font-size:0.875rem;font-weight:600;color:var(--text-primary);display:block;margin-bottom:0.4rem;">
+            5. What's on your mind? (Presenting Concern) *
+          </label>
+          <textarea name="presenting_concern" required rows="4" class="db-textarea"
+                    placeholder="Briefly share what you'd like to work on with your therapist (e.g., anxiety, academic burnout, grief, life transition)..."
+                    style="width:100%;padding:0.75rem 0.9rem;background:#111827;border:1px solid var(--border);border-radius:var(--radius-sm);color:#fff;font-size:0.9rem;"></textarea>
+          <span style="font-size:0.75rem;color:var(--text-subtle);margin-top:0.25rem;display:block;">
+            Your notes are held in strict clinical confidentiality.
+          </span>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" id="book-submit-btn" class="btn btn-primary btn-block"
+                style="padding:0.9rem;font-size:1rem;font-weight:700;color:#FFFFFF !important;">
+          Confirm Booking & Hold Slot (Deduct 1 Session) →
+        </button>
+
+        <p style="text-align:center;font-size:0.8rem;color:var(--text-subtle);margin-top:1rem;">
+          1 session will be held upon booking. If your session is declined or cancelled, your quota is automatically refunded.
+        </p>
+
+      </form>
+
+    {% endif %}
+
+  </div>
+</div>
+
+<script>
+  // Set default date to tomorrow
+  window.addEventListener('DOMContentLoaded', () => {
+    const dateInput = document.getElementById('appointment_date');
+    if (dateInput) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      // Skip to Monday if weekend
+      if (tomorrow.getDay() === 0) tomorrow.setDate(tomorrow.getDate() + 1);
+      if (tomorrow.getDay() === 6) tomorrow.setDate(tomorrow.getDate() + 2);
+
+      const yyyy = tomorrow.getFullYear();
+      const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+      const dd = String(tomorrow.getDate()).padStart(2, '0');
+      const minStr = `${yyyy}-${mm}-${dd}`;
+      dateInput.min = minStr;
+      dateInput.value = minStr;
+
+      // Trigger initial slot load
+      loadAvailableSlots();
+    }
+  });
+
+  let selectedTimeSlot = null;
+
+  async function loadAvailableSlots() {
+    const therapistSelect = document.getElementById('therapist-select');
+    const dateInput = document.getElementById('appointment_date');
+    const promptEl = document.getElementById('slots-prompt');
+    const gridEl = document.getElementById('slot-buttons');
+    const timeInput = document.getElementById('appointment_time');
+
+    if (!therapistSelect || !dateInput) return;
+
+    const therapistId = therapistSelect.value;
+    const dateVal = dateInput.value;
+
+    timeInput.value = '';
+    selectedTimeSlot = null;
+
+    if (!therapistId || !dateVal) {
+      promptEl.style.display = 'block';
+      promptEl.innerText = 'Please select a therapist and date to view slots.';
+      gridEl.style.display = 'none';
+      gridEl.innerHTML = '';
+      return;
+    }
+
+    promptEl.style.display = 'block';
+    promptEl.innerHTML = '<span class="loading-spinner"></span> Checking clinician calendar for available hours...';
+    gridEl.style.display = 'none';
+    gridEl.innerHTML = '';
+
+    try {
+      const response = await fetch(`{% url 'get_available_slots' %}?therapist_id=${encodeURIComponent(therapistId)}&date=${encodeURIComponent(dateVal)}`);
+      if (!response.ok) throw new Error('Network error');
+      const data = await response.json();
+
+      if (!data.slots || data.slots.length === 0) {
+        promptEl.style.display = 'block';
+        promptEl.innerHTML = '⚠️ No open 1-hour slots found for this clinician on this date. Please try another day.';
+        gridEl.style.display = 'none';
+      } else {
+        promptEl.style.display = 'none';
+        gridEl.style.display = 'grid';
+        gridEl.innerHTML = '';
+
+        data.slots.forEach((slot, index) => {
+          const btn = document.createElement('div');
+          btn.className = 'slot-btn';
+          btn.innerText = slot.label || slot.time;
+          btn.dataset.time = slot.time;
+
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('slot-btn--selected'));
+            btn.classList.add('slot-btn--selected');
+            selectedTimeSlot = slot.time;
+            timeInput.value = slot.time;
+          });
+
+          gridEl.appendChild(btn);
+
+          // Select first slot by default
+          if (index === 0) {
+            btn.click();
+          }
+        });
+      }
+    } catch (err) {
+      promptEl.style.display = 'block';
+      promptEl.innerText = 'Unable to fetch open slots. Please refresh or try again.';
+      gridEl.style.display = 'none';
+    }
+  }
+
+  // Client side validation on submit
+  const bookingForm = document.getElementById('booking-form');
+  if (bookingForm) {
+    bookingForm.addEventListener('submit', (e) => {
+      const timeInput = document.getElementById('appointment_time');
+      if (!timeInput.value) {
+        e.preventDefault();
+        alert('Please select an available 1-hour time slot before continuing.');
+      }
+    });
+  }
+</script>
+{% endblock %}

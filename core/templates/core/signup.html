@@ -1,0 +1,66 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Sign Up — COEUS{% endblock %}
+
+{% block body %}
+<div class="auth-page">
+  <div class="auth-card">
+    <a href="/" class="auth-logo"><img src="{% static 'img/coeuslogo.jpeg' %}" alt="COEUS" class="auth-logo-img" /></a>
+    <h1 class="auth-title">Create your account</h1>
+    <p class="auth-sub">Free, private, and secure. No real name needed.</p>
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-error">
+        {{ form.non_field_errors.0 }}
+      </div>
+    {% endif %}
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="field">
+        <label for="id_email">Email address</label>
+        {{ form.email }}
+        {% if form.email.errors %}
+          <span class="field-error">{{ form.email.errors.0 }}</span>
+        {% endif %}
+      </div>
+
+      <div class="field">
+        <label for="id_password">Password</label>
+        {{ form.password }}
+        {% if form.password.errors %}
+          <span class="field-error">{{ form.password.errors.0 }}</span>
+        {% endif %}
+      </div>
+
+      <div class="field">
+        <label for="id_confirm_password">Confirm password</label>
+        {{ form.confirm_password }}
+        {% if form.confirm_password.errors %}
+          <span class="field-error">{{ form.confirm_password.errors.0 }}</span>
+        {% endif %}
+      </div>
+
+      <div class="checkbox-field">
+        {{ form.agree_privacy }}
+        <label for="id_agree_privacy">
+          I have read and agree to the <a href="/privacy" target="_blank">Privacy Policy</a>
+        </label>
+      </div>
+      {% if form.agree_privacy.errors %}
+        <span class="field-error" style="margin-top:-1rem;margin-bottom:1rem;display:block;">
+          {{ form.agree_privacy.errors.0 }}
+        </span>
+      {% endif %}
+
+      <button type="submit" class="btn btn-primary btn-block">Create My Account</button>
+    </form>
+
+    <p class="auth-switch">
+      Already have an account? <a href="/signin">Sign in</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

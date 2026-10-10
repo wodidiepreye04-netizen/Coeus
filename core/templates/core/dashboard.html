@@ -1,0 +1,600 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Dashboard — COEUS{% endblock %}
+
+{% block body %}
+<div class="db-page">
+
+  <!-- ── Nav ── -->
+  <nav class="db-nav">
+    <div class="db-nav-inner">
+      <a href="/" class="nav-logo">
+        <img src="{% static 'img/coeuslogo.jpeg' %}" alt="COEUS" class="nav-logo-img" />
+      </a>
+      <div class="db-nav-right">
+        <a href="{% url 'journal_vault' %}" class="btn btn-outline" style="padding:0.4rem 0.9rem;font-size:0.82rem;display:inline-flex;align-items:center;gap:0.35rem;">
+          <span>📓</span><span>Journal Vault</span>
+        </a>
+        <span class="db-nav-name">{% if profile %}{{ profile.display_name }}{% else %}{{ request.user.email }}{% endif %}</span>
+        <a href="{% url 'signout' %}" class="btn btn-outline" style="padding:0.4rem 1rem;font-size:0.82rem;">Sign out</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="db-body">
+
+    <!-- ── Greeting ── -->
+    <header class="db-greeting">
+      <div>
+        <h1 class="db-greeting-title font-serif">
+          {% if profile %}Hey, {{ profile.display_name }}.{% else %}Welcome back.{% endif %}
+        </h1>
+        <p class="db-greeting-sub">
+          {% if today_mood %}
+            You've checked in today — keep going.
+          {% else %}
+            How are you doing today?
+          {% endif %}
+        </p>
+        <div style="display:inline-flex;align-items:center;gap:0.6rem;margin-top:0.65rem;flex-wrap:wrap;">
+          {% if has_active_subscription %}
+            <span class="db-card-tag" style="background:rgba(45,212,191,0.12);color:var(--accent);border-color:rgba(45,212,191,0.3);font-size:0.8rem;padding:0.25rem 0.65rem;">
+              ✓ Plan: {{ active_subscription.get_plan_display }}
+            </span>
+            <span class="db-card-tag" style="background:rgba(129,140,248,0.12);color:#818cf8;border-color:rgba(129,140,248,0.3);font-size:0.8rem;padding:0.25rem 0.65rem;font-weight:600;">
+              🎟️ {{ sessions_remaining }} of {{ sessions_allocated }} Therapy Sessions Remaining
+            </span>
+          {% else %}
+            <span class="db-card-tag" style="background:rgba(251,191,36,0.12);color:#fbbf24;border-color:rgba(251,191,36,0.3);font-size:0.8rem;padding:0.25rem 0.65rem;">
+              🛡️ No Active Plan (0 Sessions Remaining)
+            </span>
+            <a href="{% url 'subscribe' %}" class="db-link" style="font-size:0.8rem;text-decoration:underline;">Choose a care plan →</a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="db-quick-stats">
+        <div class="db-stat">
+          <span class="db-stat-value">{% if today_mood %}{{ today_mood.emoji }}{% else %}—{% endif %}</span>
+          <span class="db-stat-label">Today</span>
+        </div>
+        <div class="db-stat">
+          <span class="db-stat-value">{{ mood_chart|length }}</span>
+          <span class="db-stat-label">Day streak</span>
+        </div>
+        <div class="db-stat">
+          <span class="db-stat-value" style="color:var(--accent);">{{ sessions_remaining }}</span>
+          <span class="db-stat-label">Sessions Left</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── Grid ── -->
+    <div class="db-grid">
+
+      <!-- ══ LEFT COLUMN ══ -->
+      <div class="db-col">
+
+        <!-- Mood Check-in -->
+        <section class="db-card" id="mood">
+          <div class="db-card-header">
+            <h2 class="db-card-title">Today's Mood</h2>
+            <span class="db-card-tag">{% if today_mood %}Done ✓{% else %}Check in{% endif %}</span>
+          </div>
+
+          {% if today_mood %}
+            <!-- Already checked in — show result + trend -->
+            <div class="mood-done">
+              <span class="mood-done-emoji">{{ today_mood.emoji }}</span>
+              <div>
+                <p class="mood-done-label">{{ today_mood.label }}</p>
+                <p class="mood-done-time">Logged today</p>
+              </div>
+              <form method="post" action="{% url 'mood_checkin' %}" style="margin-left:auto;">
+                {% csrf_token %}
+                <input type="hidden" name="mood" value="">
+                <button type="button" class="db-link" id="change-mood-btn">Change</button>
+              </form>
+            </div>
+            <div id="mood-checkin-form" style="display:none;margin-top:1rem;">
+              <form method="post" action="{% url 'mood_checkin' %}" id="mood-form-inner">
+                {% csrf_token %}
+                <div class="mood-grid">
+                  {% for opt in mood_checkin_options %}
+                    <label class="mood-btn {% if today_mood.mood == opt.value %}mood-btn--active{% endif %}">
+                      <input type="radio" name="mood" value="{{ opt.value }}">
+                      <span class="mood-btn-emoji">{{ opt.emoji }}</span>
+                      <span class="mood-btn-label">{{ opt.label }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              </form>
+            </div>
+          {% else %}
+            <!-- Not checked in yet -->
+            <p class="db-card-sub">How are you feeling right now?</p>
+            <form method="post" action="{% url 'mood_checkin' %}" id="mood-form">
+              {% csrf_token %}
+              <div class="mood-grid">
+                {% for opt in mood_checkin_options %}
+                  <label class="mood-btn">
+                    <input type="radio" name="mood" value="{{ opt.value }}">
+                    <span class="mood-btn-emoji">{{ opt.emoji }}</span>
+                    <span class="mood-btn-label">{{ opt.label }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </form>
+          {% endif %}
+
+          <!-- 7-day trend -->
+          {% if mood_chart %}
+            <div class="mood-trend">
+              <p class="mood-trend-label">7-day trend</p>
+              <div class="mood-bars">
+                {% for day in mood_chart %}
+                  <div class="mood-bar-col">
+                    <div class="mood-bar-wrap">
+                      <div class="mood-bar" style="height:{{ day.height }};background:{{ day.color }};"
+                           title="{% if day.entry %}{{ day.entry.label }}{% else %}No entry{% endif %}">
+                      </div>
+                    </div>
+                    <span class="mood-bar-day {% if day.date == today %}mood-bar-day--today{% endif %}">{{ day.day }}</span>
+                  </div>
+                {% endfor %}
+              </div>
+              {% if mood_insight %}
+                <p class="mood-insight">{{ mood_insight }}</p>
+              {% endif %}
+            </div>
+          {% endif %}
+        </section>
+
+        <!-- Journal Sanctuary -->
+        <section class="db-card" id="journal">
+          <div class="db-card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+            <div>
+              <h2 class="db-card-title">📓 Personal Journal Sanctuary</h2>
+              <span style="font-size:0.75rem;color:var(--accent);display:inline-block;margin-top:0.2rem;">
+                🔒 End-to-End Encrypted at Rest (Fernet)
+              </span>
+            </div>
+            <a href="{% url 'journal_vault' %}" class="btn btn-outline" style="padding:0.35rem 0.75rem;font-size:0.78rem;">
+              Full Journal Vault ({{ journal_history|length }}) →
+            </a>
+          </div>
+
+          <!-- Journal Tabs -->
+          <div style="display:flex;gap:0.5rem;border-bottom:1px solid var(--border);margin:1rem 0 1.25rem;">
+            <button type="button" id="tab-btn-write" onclick="switchJournalTab('write')"
+                    style="background:none;border:none;padding:0.5rem 0.85rem;font-size:0.85rem;font-weight:600;color:var(--accent);border-bottom:2px solid var(--accent);cursor:pointer;">
+              ✍️ Write Today ({{ today|date:"M j" }})
+            </button>
+            <button type="button" id="tab-btn-history" onclick="switchJournalTab('history')"
+                    style="background:none;border:none;padding:0.5rem 0.85rem;font-size:0.85rem;font-weight:600;color:var(--text-muted);border-bottom:2px solid transparent;cursor:pointer;">
+              📚 Past Entries ({{ journal_history|length }})
+            </button>
+          </div>
+
+          <!-- Write Panel -->
+          <div id="panel-journal-write">
+            <p class="db-card-sub" style="margin-bottom:0.75rem;">
+              Write freely. Everything is encrypted before storage and visible only to your eyes.
+            </p>
+            <form method="post" action="{% url 'journal_save' %}">
+              {% csrf_token %}
+              <input type="hidden" name="date" value="{{ today|date:'Y-m-d' }}">
+              <input type="hidden" name="next" value="dashboard#journal">
+              <textarea name="content" class="db-textarea" rows="6"
+                placeholder="What's on your mind today? Reflect on your mood, challenges, thoughts, or wins...">{{ journal_content }}</textarea>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.75rem;flex-wrap:wrap;gap:0.5rem;">
+                <span style="font-size:0.75rem;color:var(--text-subtle);">
+                  {% if journal_content %}Last saved entry decrypted from secure storage.{% else %}No entry saved for today yet.{% endif %}
+                </span>
+                <button type="submit" class="btn btn-primary" style="padding:0.45rem 1.25rem;font-size:0.85rem;color:#FFFFFF !important;font-weight:600;">
+                  {% if journal_content %}Update Today's Entry{% else %}Save Reflection{% endif %}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Past Entries Panel -->
+          <div id="panel-journal-history" style="display:none;">
+            {% if journal_history %}
+              <div style="display:flex;flex-direction:column;gap:0.85rem;max-height:420px;overflow-y:auto;padding-right:0.35rem;">
+                {% for entry in journal_history %}
+                  <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.9rem 1rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;flex-wrap:wrap;gap:0.4rem;">
+                      <strong style="color:var(--accent);font-size:0.85rem;">
+                        📅 {{ entry.date|date:"l, F j, Y" }}
+                      </strong>
+                      <span style="font-size:0.72rem;color:var(--text-subtle);">
+                        {{ entry.word_count }} words · Updated {{ entry.updated_at|date:"g:i A" }}
+                      </span>
+                    </div>
+                    <div style="font-size:0.85rem;color:var(--text-primary);line-height:1.6;white-space:pre-wrap;background:rgba(0,0,0,0.2);padding:0.75rem;border-radius:4px;border:1px solid rgba(255,255,255,0.04);">
+                      {{ entry.content }}
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+              <div style="text-align:center;margin-top:1rem;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.06);">
+                <a href="{% url 'journal_vault' %}" class="db-link" style="font-size:0.85rem;text-decoration:underline;">
+                  Open Full Journal Vault & Archive →
+                </a>
+              </div>
+            {% else %}
+              <div class="db-empty-card" style="padding:2rem 1rem;">
+                <span class="db-empty-icon">📓</span>
+                <p>No past journal entries recorded yet.</p>
+                <button type="button" class="btn btn-primary" onclick="switchJournalTab('write')" style="margin-top:0.75rem;padding:0.4rem 1rem;font-size:0.82rem;color:#FFFFFF !important;">
+                  Write Your First Reflection
+                </button>
+              </div>
+            {% endif %}
+          </div>
+        </section>
+
+        <script>
+          function switchJournalTab(tab) {
+            const writeBtn = document.getElementById('tab-btn-write');
+            const histBtn = document.getElementById('tab-btn-history');
+            const writePanel = document.getElementById('panel-journal-write');
+            const histPanel = document.getElementById('panel-journal-history');
+
+            if (tab === 'write') {
+              writeBtn.style.color = 'var(--accent)';
+              writeBtn.style.borderBottomColor = 'var(--accent)';
+              histBtn.style.color = 'var(--text-muted)';
+              histBtn.style.borderBottomColor = 'transparent';
+              writePanel.style.display = 'block';
+              histPanel.style.display = 'none';
+            } else {
+              histBtn.style.color = 'var(--accent)';
+              histBtn.style.borderBottomColor = 'var(--accent)';
+              writeBtn.style.color = 'var(--text-muted)';
+              writeBtn.style.borderBottomColor = 'transparent';
+              histPanel.style.display = 'block';
+              writePanel.style.display = 'none';
+            }
+          }
+        </script>
+
+      </div>
+
+      <!-- ══ RIGHT COLUMN ══ -->
+      <div class="db-col">
+
+        <!-- Goals & Tasks -->
+        <section class="db-card" id="goals">
+          <div class="db-card-header">
+            <h2 class="db-card-title">Goals & Tasks</h2>
+            <span class="db-card-tag">This week</span>
+          </div>
+
+          <!-- Weekly Goals -->
+          <p class="db-section-label">Weekly therapy goals</p>
+          <ul class="db-checklist">
+            {% for goal in goals %}
+              <li class="db-check-item {% if goal.completed %}db-check-item--done{% endif %}">
+                <form method="post" action="{% url 'goal_toggle' goal.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="db-check-btn" aria-label="Toggle goal">
+                    <span class="db-check-box">{% if goal.completed %}✓{% endif %}</span>
+                  </button>
+                </form>
+                <span class="db-check-text">{{ goal.text }}</span>
+              </li>
+            {% empty %}
+              <li class="db-empty-state">No goals set yet.</li>
+            {% endfor %}
+          </ul>
+
+          <!-- Daily Tasks -->
+          <p class="db-section-label" style="margin-top:1.5rem;">Today's reflections</p>
+          <ul class="db-checklist">
+            {% for task in tasks %}
+              <li class="db-check-item {% if task.completed %}db-check-item--done{% endif %}">
+                <form method="post" action="{% url 'task_toggle' task.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="db-check-btn" aria-label="Toggle task">
+                    <span class="db-check-box">{% if task.completed %}✓{% endif %}</span>
+                  </button>
+                </form>
+                <div>
+                  <span class="db-task-type db-task-type--{{ task.task_type }}">{{ task.get_task_type_display }}</span>
+                  <span class="db-check-text">{{ task.text }}</span>
+                </div>
+              </li>
+            {% empty %}
+              <li class="db-empty-state">No tasks for today.</li>
+            {% endfor %}
+          </ul>
+        </section>
+
+        <!-- Appointments -->
+        <section class="db-card" id="appointments">
+          <div class="db-card-header">
+            <div>
+              <h2 class="db-card-title">Therapy Sessions</h2>
+              {% if has_active_subscription %}
+                <span style="font-size:0.75rem;color:var(--accent);display:inline-block;margin-top:0.25rem;">
+                  ✓ {{ active_subscription.get_plan_display }} · {{ sessions_remaining }} of {{ sessions_allocated }} Sessions Remaining
+                </span>
+              {% else %}
+                <span style="font-size:0.75rem;color:#fbbf24;display:inline-block;margin-top:0.25rem;">
+                  🔒 Inactive · 0 Sessions Remaining
+                </span>
+              {% endif %}
+            </div>
+            {% if sessions_remaining > 0 %}
+              <a href="{% url 'appointment_book' %}" class="btn btn-primary" style="padding:0.4rem 1rem;font-size:0.82rem;color:#FFFFFF !important;">+ Book Session</a>
+            {% elif has_active_subscription %}
+              <a href="{% url 'subscribe' %}" class="btn btn-primary" style="padding:0.4rem 1rem;font-size:0.82rem;background:#fbbf24;color:#0d0d0d;border-color:#fbbf24;">Renew Quota</a>
+            {% else %}
+              <a href="{% url 'subscribe' %}" class="btn btn-primary" style="padding:0.4rem 1rem;font-size:0.82rem;background:#fbbf24;color:#0d0d0d;border-color:#fbbf24;">Choose Plan</a>
+            {% endif %}
+          </div>
+
+          {% if not has_active_subscription %}
+            <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-radius:var(--radius-sm);padding:0.85rem 1rem;margin-bottom:1rem;font-size:0.82rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;">
+              <span style="color:#fef08a;">Subscribe to Basic (₦25,000), Pro (₦45,000), or Max (₦65,000) to unlock private sessions with licensed therapists.</span>
+              <a href="{% url 'subscribe' %}" class="btn btn-primary" style="padding:0.3rem 0.75rem;font-size:0.78rem;white-space:nowrap;color:#FFFFFF !important;">View Plans →</a>
+            </div>
+          {% elif sessions_remaining == 0 %}
+            <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-radius:var(--radius-sm);padding:0.85rem 1rem;margin-bottom:1rem;font-size:0.82rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;">
+              <span style="color:#fef08a;">You have used all {{ sessions_allocated }} sessions for your billing cycle. Renew or upgrade to book more sessions.</span>
+              <a href="{% url 'subscribe' %}" class="btn btn-primary" style="padding:0.3rem 0.75rem;font-size:0.78rem;white-space:nowrap;color:#FFFFFF !important;">Renew Sessions →</a>
+            </div>
+          {% endif %}
+
+          {% if upcoming %}
+            <p class="db-section-label" style="margin-bottom:0.6rem;">Upcoming Sessions</p>
+            {% for appt in upcoming %}
+              <div class="appt-card appt-card--{{ appt.status }}" style="margin-bottom:0.85rem;border-radius:var(--radius-sm);border:1px solid var(--border);padding:1rem;background:rgba(255,255,255,0.02);">
+                <div class="appt-card-top" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                  <span class="appt-type" style="font-weight:600;font-size:0.85rem;color:var(--text-primary);">{{ appt.get_support_type_display }}</span>
+                  <span class="appt-status appt-status--{{ appt.status }}" style="font-size:0.75rem;padding:0.2rem 0.55rem;border-radius:50px;text-transform:capitalize;font-weight:600;{% if appt.status == 'confirmed' %}background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);{% elif appt.status == 'pending' %}background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);{% else %}background:rgba(255,255,255,0.1);color:var(--text-muted);{% endif %}">
+                    {{ appt.get_status_display }}
+                  </span>
+                </div>
+                <div style="margin:0.35rem 0;">
+                  <p style="font-size:0.85rem;color:var(--text-primary);margin:0 0 0.2rem;">
+                    {% if appt.therapist %}
+                      👨‍⚕️ Therapist: <strong>{{ appt.therapist.get_full_name|default:appt.therapist.email }}</strong>
+                    {% else %}
+                      👨‍⚕️ Therapist Assigned
+                    {% endif %}
+                  </p>
+                  <p style="font-size:0.82rem;color:var(--text-muted);margin:0;">
+                    📅 {{ appt.appointment_date|date:"l, F j, Y" }} · ⏰ {{ appt.appointment_time|time:"g:i A" }} – {{ appt.end_time|time:"g:i A" }}
+                  </p>
+                </div>
+                {% if appt.status == "pending" %}
+                  <p class="appt-body" style="font-size:0.8rem;color:var(--text-subtle);margin-top:0.4rem;">
+                    ⏳ Session requested. Slot is reserved for you while your therapist confirms the meeting link.
+                  </p>
+                {% elif appt.status == "confirmed" %}
+                  <div style="margin-top:0.75rem;padding-top:0.6rem;border-top:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+                    {% if appt.meeting_link %}
+                      <a href="{{ appt.meeting_link }}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="background:#10b981;border-color:#10b981;color:#ffffff !important;font-weight:600;padding:0.45rem 1.1rem;font-size:0.85rem;display:inline-flex;align-items:center;gap:0.4rem;border-radius:var(--radius-sm);">
+                        🎥 Join Session
+                      </a>
+                      <span style="font-size:0.75rem;color:#10b981;">Link ready · Click to enter call</span>
+                    {% else %}
+                      <span style="font-size:0.8rem;color:var(--accent);">✓ Confirmed — Your therapist will attach the video meeting link shortly.</span>
+                    {% endif %}
+                  </div>
+                {% endif %}
+                {% if appt.presenting_concern %}
+                  <p class="appt-concern" style="margin-top:0.5rem;font-size:0.78rem;color:var(--text-subtle);font-style:italic;">
+                    Concern: "{{ appt.presenting_concern|truncatechars:90 }}"
+                  </p>
+                {% endif %}
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="db-empty-card" style="margin-bottom:1rem;">
+              <span class="db-empty-icon">🗓️</span>
+              <p>No upcoming therapy sessions scheduled.</p>
+              {% if sessions_remaining > 0 %}
+                <a href="{% url 'appointment_book' %}" class="btn btn-primary btn-block" style="margin-top:1rem;color:#FFFFFF !important;">Book a Session ({{ sessions_remaining }} Remaining)</a>
+              {% elif has_active_subscription %}
+                <a href="{% url 'subscribe' %}" class="btn btn-primary btn-block" style="margin-top:1rem;background:#fbbf24;color:#0d0d0d;border-color:#fbbf24;">Renew Quota to Book</a>
+              {% else %}
+                <a href="{% url 'subscribe' %}" class="btn btn-primary btn-block" style="margin-top:1rem;background:#fbbf24;color:#0d0d0d;border-color:#fbbf24;">Subscribe to Book a Session</a>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          {% if past_appointments %}
+            <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);">
+              <p class="db-section-label" style="margin-bottom:0.6rem;">Past Sessions</p>
+              <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                {% for past in past_appointments %}
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0.85rem;background:rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.05);border-radius:var(--radius-sm);font-size:0.82rem;">
+                    <div>
+                      <span style="color:var(--text-primary);font-weight:500;">{{ past.get_support_type_display }}</span>
+                      <span style="color:var(--text-subtle);margin-left:0.4rem;">· {{ past.appointment_date|date:"M j, Y" }} ({{ past.appointment_time|time:"g:i A" }})</span>
+                    </div>
+                    <span style="font-size:0.75rem;padding:0.15rem 0.5rem;border-radius:4px;text-transform:capitalize;{% if past.status == 'completed' %}background:rgba(59,130,246,0.15);color:#60a5fa;{% else %}background:rgba(244,63,94,0.15);color:#f43f5e;{% endif %}">
+                      {{ past.get_status_display }}
+                    </span>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Message therapist -->
+          <div class="msg-therapist" style="margin-top:1.5rem;">
+            <p class="db-section-label">Message your therapist</p>
+            {% if upcoming %}
+              <div class="msg-locked">
+                <span>🔒</span>
+                <p>Direct chat unlocks during active sessions with your clinician.</p>
+              </div>
+            {% else %}
+              <div class="msg-locked">
+                <span>🔒</span>
+                <p>Book a session to connect directly with your clinician.</p>
+              </div>
+            {% endif %}
+          </div>
+        </section>
+
+      </div>
+
+    </div><!-- /db-grid -->
+
+    <!-- ── Emergency Support (full width) ── -->
+    <section class="db-card db-card--emergency" id="emergency">
+      <div class="db-card-header">
+        <h2 class="db-card-title">⚡ Emergency Support</h2>
+        <span class="db-card-tag db-card-tag--warning">Always available</span>
+      </div>
+
+      <div class="emergency-grid">
+
+        <!-- Crisis contacts -->
+        <div class="emergency-col">
+          <p class="db-section-label">Crisis contacts — Nigeria</p>
+          <ul class="crisis-contacts">
+            <li><span class="cc-label">Emergency</span><a href="tel:112" class="cc-num">112</a><span class="cc-sep">or</span><a href="tel:767" class="cc-num">767</a></li>
+            <li><span class="cc-label">Suicide Prevention</span><a href="tel:+2348062106493" class="cc-num">+234 806 210 6493</a></li>
+            <li><span class="cc-label">Mental Health Nigeria</span><a href="tel:+2348111110323" class="cc-num">+234 811 111 0323</a></li>
+            <li><span class="cc-label">Mentally Aware Nigeria</span><a href="tel:+2348092100009" class="cc-num">+234 809 210 0009</a></li>
+          </ul>
+        </div>
+
+        <!-- Grounding exercises -->
+        <div class="emergency-col">
+          <p class="db-section-label">Quick grounding</p>
+          <div class="grounding-cards">
+
+            <details class="grounding-item">
+              <summary class="grounding-summary">
+                <span class="grounding-icon">👁️</span>
+                <span>5-4-3-2-1 Sensory</span>
+              </summary>
+              <div class="grounding-body">
+                <p>Name <strong>5</strong> things you can see</p>
+                <p>Name <strong>4</strong> things you can touch</p>
+                <p>Name <strong>3</strong> things you can hear</p>
+                <p>Name <strong>2</strong> things you can smell</p>
+                <p>Name <strong>1</strong> thing you can taste</p>
+              </div>
+            </details>
+
+            <details class="grounding-item">
+              <summary class="grounding-summary">
+                <span class="grounding-icon">🫁</span>
+                <span>Box Breathing</span>
+              </summary>
+              <div class="grounding-body">
+                <p>Breathe <strong>in</strong> for 4 counts</p>
+                <p><strong>Hold</strong> for 4 counts</p>
+                <p>Breathe <strong>out</strong> for 4 counts</p>
+                <p><strong>Hold</strong> for 4 counts</p>
+                <p>Repeat 4 times.</p>
+              </div>
+            </details>
+
+            <details class="grounding-item">
+              <summary class="grounding-summary">
+                <span class="grounding-icon">💧</span>
+                <span>Cold Water Reset</span>
+              </summary>
+              <div class="grounding-body">
+                <p>Splash cold water on your face or hold your wrists under cold water for 30 seconds. This activates your body's calming response.</p>
+              </div>
+            </details>
+
+          </div>
+        </div>
+
+        <!-- Safety plan -->
+        <div class="emergency-col">
+          <p class="db-section-label">My safety plan</p>
+          <details class="safety-plan-details">
+            <summary class="safety-plan-summary">
+              {% if safety_plan %}✓ Safety plan saved{% else %}Set up your safety plan{% endif %}
+            </summary>
+            <form method="post" action="{% url 'safety_plan' %}" class="safety-plan-form">
+              {% csrf_token %}
+              <div class="sp-field">
+                <label>Warning signs I notice in myself</label>
+                <textarea name="warning_signs" class="db-textarea" rows="2"
+                  placeholder="e.g. withdrawing from others, not sleeping...">{{ safety_form.initial.warning_signs }}</textarea>
+              </div>
+              <div class="sp-field">
+                <label>My coping strategies</label>
+                <textarea name="coping_strategies" class="db-textarea" rows="2"
+                  placeholder="e.g. deep breathing, going for a walk...">{{ safety_form.initial.coping_strategies }}</textarea>
+              </div>
+              <div class="sp-field">
+                <label>People I can reach out to</label>
+                <textarea name="support_people" class="db-textarea" rows="2"
+                  placeholder="Names and numbers...">{{ safety_form.initial.support_people }}</textarea>
+              </div>
+              <div class="sp-field">
+                <label>My reasons to live</label>
+                <textarea name="reasons_to_live" class="db-textarea" rows="2"
+                  placeholder="The people, dreams, and things that matter...">{{ safety_form.initial.reasons_to_live }}</textarea>
+              </div>
+              <div class="sp-field">
+                <label>Making my environment safe</label>
+                <textarea name="safe_environment" class="db-textarea" rows="2"
+                  placeholder="Steps to make my space safer...">{{ safety_form.initial.safe_environment }}</textarea>
+              </div>
+              <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem;">Save Safety Plan</button>
+            </form>
+          </details>
+        </div>
+
+      </div>
+    </section>
+
+  </div><!-- /db-body -->
+
+  <!-- ── Mobile bottom bar ── -->
+  <nav class="db-bottom-bar">
+    <a href="#mood" class="db-bottom-item">
+      <span>😊</span><span>Mood</span>
+    </a>
+    <a href="#journal" class="db-bottom-item">
+      <span>📓</span><span>Journal</span>
+    </a>
+    <a href="#goals" class="db-bottom-item">
+      <span>🎯</span><span>Goals</span>
+    </a>
+    <a href="#appointments" class="db-bottom-item">
+      <span>🗓️</span><span>Sessions</span>
+    </a>
+    <a href="#emergency" class="db-bottom-item db-bottom-item--emergency">
+      <span>🆘</span><span>Help</span>
+    </a>
+  </nav>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Auto-submit mood form on emoji click
+  document.querySelectorAll('#mood-form .mood-btn input, #mood-form-inner .mood-btn input').forEach(input => {
+    input.addEventListener('change', () => {
+      input.closest('form').submit();
+    });
+  });
+
+  // Toggle "change mood" form
+  const changeBtn = document.getElementById('change-mood-btn');
+  if (changeBtn) {
+    changeBtn.addEventListener('click', () => {
+      const formDiv = document.getElementById('mood-checkin-form');
+      formDiv.style.display = formDiv.style.display === 'none' ? 'block' : 'none';
+    });
+  }
+</script>
+{% endblock %}

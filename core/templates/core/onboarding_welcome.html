@@ -1,0 +1,51 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Welcome — COEUS{% endblock %}
+
+{% block body %}
+<div class="onboarding-page">
+  <div class="onboarding-card">
+
+    <div class="onboarding-logo">
+      <img src="{% static 'img/coeuslogo.jpeg' %}" alt="COEUS" class="auth-logo-img" />
+    </div>
+
+    <h1 class="onboarding-title">Welcome to COEUS</h1>
+    <p class="onboarding-sub">Your safe space for emotional support</p>
+
+    <div class="onboarding-divider"></div>
+
+    <div class="onboarding-two-col">
+      <div class="onboarding-col">
+        <p class="onboarding-col-label onboarding-col-label--yes">What COEUS Does</p>
+        <ul class="onboarding-list onboarding-list--yes">
+          <li>Listens without judgment</li>
+          <li>Provides 24/7 support</li>
+          <li>Connects you to human therapists in crisis</li>
+        </ul>
+      </div>
+      <div class="onboarding-col">
+        <p class="onboarding-col-label onboarding-col-label--no">What COEUS Doesn't Do</p>
+        <ul class="onboarding-list onboarding-list--no">
+          <li>Diagnose mental health conditions</li>
+          <li>Prescribe medication</li>
+          <li>Replace professional therapy</li>
+        </ul>
+      </div>
+    </div>
+
+    <form method="post" style="margin-top: 2rem;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary btn-block">Continue</button>
+    </form>
+
+    <div class="onboarding-progress">
+      <span class="onboarding-dot onboarding-dot--active"></span>
+      <span class="onboarding-dot"></span>
+      <span class="onboarding-dot"></span>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

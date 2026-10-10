@@ -1,0 +1,236 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}My Private Journal Sanctuary — COEUS{% endblock %}
+
+{% block extra_head %}
+<style>
+  .journal-page {
+    min-height: 100vh;
+    padding: 3rem 1.25rem 5rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .journal-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    margin-bottom: 1.75rem;
+    transition: color 0.15s;
+  }
+  .journal-back:hover {
+    color: var(--accent);
+  }
+
+  .journal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+  }
+  .journal-title {
+    font-family: 'Fraunces', serif;
+    font-size: 2.2rem;
+    color: var(--text-primary);
+    margin-bottom: 0.35rem;
+  }
+  .journal-sub {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+  }
+
+  .stat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(45, 212, 191, 0.1);
+    border: 1px solid rgba(45, 212, 191, 0.25);
+    border-radius: 50px;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.82rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .editor-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.75rem;
+    margin-bottom: 2.5rem;
+    box-shadow: var(--shadow);
+  }
+
+  .entry-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    transition: border-color 0.15s;
+  }
+  .entry-card:hover {
+    border-color: rgba(45, 212, 191, 0.35);
+  }
+  .entry-date {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .entry-meta {
+    font-size: 0.78rem;
+    color: var(--text-subtle);
+  }
+  .entry-body {
+    font-size: 0.92rem;
+    line-height: 1.7;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    margin-top: 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1rem 1.25rem;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  .search-bar {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: #111827;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: #fff;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+  .search-bar:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="journal-page">
+
+  <a href="{% url 'dashboard' %}" class="journal-back">← Back to Sanctuary Dashboard</a>
+
+  <div class="journal-header">
+    <div>
+      <h1 class="journal-title">My Journal Vault</h1>
+      <p class="journal-sub">Your private, encrypted reflection archive. Only you can read what is stored here.</p>
+    </div>
+    <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+      <div class="stat-pill">
+        <span>🔒</span>
+        <span>AES-128 Fernet Encrypted</span>
+      </div>
+      <div class="stat-pill" style="background:rgba(129,140,248,0.1);border-color:rgba(129,140,248,0.25);color:#818cf8;">
+        <span>📖</span>
+        <span>{{ total_entries }} Entries ({{ total_words }} words)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Write / Edit Reflection Box -->
+  <div class="editor-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+      <h3 style="margin:0;font-size:1.15rem;color:var(--text-primary);">
+        ✍️ Write or Update Reflection
+      </h3>
+      <span style="font-size:0.75rem;color:var(--accent);">Auto-decrypted on render</span>
+    </div>
+
+    <form method="post" action="{% url 'journal_vault' %}">
+      {% csrf_token %}
+      <div style="display:flex;gap:1rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap;">
+        <div>
+          <label style="font-size:0.8rem;color:var(--text-subtle);display:block;margin-bottom:0.25rem;">Date of Entry</label>
+          <input type="date" name="date" value="{{ today|date:'Y-m-d' }}" required
+                 style="padding:0.5rem 0.75rem;background:#111827;border:1px solid var(--border);border-radius:4px;color:#fff;font-size:0.85rem;">
+        </div>
+      </div>
+
+      <textarea name="content" class="db-textarea" rows="7" required
+                placeholder="Write your honest thoughts, emotions, triggers, victories, or questions here..."
+                style="width:100%;padding:0.85rem;background:#111827;border:1px solid var(--border);border-radius:var(--radius-sm);color:#fff;font-size:0.92rem;line-height:1.6;">{{ today_content }}</textarea>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;flex-wrap:wrap;gap:0.75rem;">
+        <span style="font-size:0.78rem;color:var(--text-subtle);">
+          Stored directly to encrypted ciphertext in SQLite database.
+        </span>
+        <button type="submit" class="btn btn-primary" style="padding:0.6rem 1.5rem;color:#FFFFFF !important;font-weight:600;">
+          Save Encrypted Reflection →
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Historical Archive & Search -->
+  <div style="margin-bottom:1.5rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+    <h2 style="font-size:1.4rem;color:var(--text-primary);font-family:'Fraunces',serif;margin:0;">
+      All Past Reflections ({{ journal_history|length }})
+    </h2>
+    <span style="font-size:0.82rem;color:var(--text-muted);">
+      Chronological archive
+    </span>
+  </div>
+
+  <!-- Search Filter -->
+  <input type="text" id="journal-search" class="search-bar"
+         placeholder="🔍 Search entries by keyword, feelings, or date..."
+         oninput="filterJournalEntries()">
+
+  <!-- Entries Container -->
+  <div id="entries-list">
+    {% for entry in journal_history %}
+      <div class="entry-card" data-content="{{ entry.content|lower }}" data-date="{{ entry.date|date:'Y-m-d' }}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">
+          <div>
+            <div class="entry-date">📅 {{ entry.date|date:"l, F j, Y" }}</div>
+            <div class="entry-meta">
+              {{ entry.word_count }} words · Saved at {{ entry.updated_at|date:"g:i A" }}
+            </div>
+          </div>
+          <span style="font-size:0.72rem;padding:0.2rem 0.55rem;background:rgba(45,212,191,0.12);color:var(--accent);border-radius:50px;border:1px solid rgba(45,212,191,0.25);">
+            🔒 Decrypted
+          </span>
+        </div>
+
+        <div class="entry-body">{{ entry.content }}</div>
+      </div>
+    {% empty %}
+      <div class="db-empty-card" style="padding:3rem 1.5rem;text-align:center;">
+        <span class="db-empty-icon" style="font-size:2.5rem;margin-bottom:0.75rem;display:block;">📓</span>
+        <h3 style="color:var(--text-primary);margin-bottom:0.5rem;">Your Sanctuary Journal is Empty</h3>
+        <p style="color:var(--text-muted);font-size:0.9rem;max-width:440px;margin:0 auto 1.25rem;">
+          Journaling helps unpack feelings, notice behavioral patterns, and reduce rumination. Use the box above to write your first private reflection.
+        </p>
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<script>
+  function filterJournalEntries() {
+    const query = document.getElementById('journal-search').value.toLowerCase().trim();
+    const cards = document.querySelectorAll('.entry-card');
+
+    cards.forEach(card => {
+      const content = card.dataset.content || '';
+      const date = card.dataset.date || '';
+      if (!query || content.includes(query) || date.includes(query)) {
+        card.style.display = 'block';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+</script>
+{% endblock %}
