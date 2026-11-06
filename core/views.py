@@ -25,9 +25,67 @@ from .models import (
     Appointment, JournalEntry, SafetyPlan,
     Subscription, PaymentTransaction,
     TherapistAvailability,
+    ChatMessage, Assessment, SessionRating, Notification,
+    PHQ9_QUESTIONS, GAD7_QUESTIONS, ASSESSMENT_ANSWER_CHOICES,
+    compute_phq9_severity, compute_gad7_severity,
+    create_notification,
 )
 
 User = get_user_model()
+
+# ─── Affirmation Pool ──────────────────────────────────────────────────────────
+AFFIRMATIONS = [
+    "I am worthy of rest and healing.",
+    "I deserve to take up space in this world.",
+    "My feelings are valid, even the uncomfortable ones.",
+    "I am more than my worst day.",
+    "Healing is not linear, and that's okay.",
+    "I choose to be gentle with myself today.",
+    "I am allowed to set boundaries without guilt.",
+    "My mental health matters just as much as my physical health.",
+    "I am doing the best I can with what I have right now.",
+    "Every small step forward is still progress.",
+    "I am not defined by my struggles.",
+    "It's okay to ask for help. Strength comes in many forms.",
+    "I release what I cannot control.",
+    "I am enough, exactly as I am.",
+    "Today, I choose peace over perfection.",
+    "I trust myself to handle whatever comes my way.",
+    "My story isn't over yet — there are better chapters ahead.",
+    "I am worthy of love and connection.",
+    "I give myself permission to feel without judgment.",
+    "I am resilient — I have survived 100% of my hardest days.",
+    "I don't have to have it all figured out today.",
+    "My value is not determined by my productivity.",
+    "I am allowed to take things one moment at a time.",
+    "I honor my need for rest without shame.",
+    "The world is better because I am in it.",
+    "I am capable of creating positive change in my life.",
+    "I choose to focus on what I can control.",
+    "My vulnerability is a form of courage.",
+    "I deserve compassion — especially from myself.",
+    "I am growing, even when I can't see it.",
+    "I release the need to be perfect.",
+    "Today is a new opportunity to be kind to myself.",
+    "I am worthy of good things happening to me.",
+    "My past does not dictate my future.",
+    "I am proud of myself for showing up today.",
+    "I trust the timing of my life.",
+    "I am learning to let go of things that no longer serve me.",
+    "Every breath I take is a chance to begin again.",
+    "I am stronger than I think I am.",
+    "I choose hope, even when it feels hard.",
+    "I am surrounded by more support than I realize.",
+    "My journey is unique, and I don't need to compare it to anyone else's.",
+    "I have the courage to face today with an open heart.",
+    "I am allowed to change my mind and change my path.",
+    "Asking for help is an act of strength, not weakness.",
+    "I deserve moments of joy, peace, and laughter.",
+    "I am worthy of the same kindness I give to others.",
+    "I am not alone in this — someone cares about me.",
+    "Today, I choose to believe in my own potential.",
+    "I am healing at my own pace, and that is perfectly fine.",
+]
 
 _MOOD_OPTIONS = [("1", "😢"), ("2", "😟"), ("3", "😐"), ("4", "🙂"), ("5", "😊")]
 _SAFETY_CHOICES = [
@@ -326,6 +384,36 @@ def dashboard(request):
     # Subscription & session quota
     active_sub = request.user.active_subscription
 
+    # Affirmations for rotating display
+    import json as _json
+    affirmations_json = _json.dumps(AFFIRMATIONS)
+
+    # Unread notifications count
+    unread_notif_count = Notification.objects.filter(user=request.user, is_read=False).count()
+
+    # Unread messages count
+    unread_msg_count = ChatMessage.objects.filter(recipient=request.user, is_read=False).count()
+
+    # Completed appointments without ratings (prompt user to rate)
+    unrated_appointments = Appointment.objects.filter(
+        user=request.user,
+        status="completed",
+    ).exclude(rating__isnull=False).order_by("-created_at")[:3]
+
+    # Latest assessment scores
+    latest_phq9 = Assessment.objects.filter(user=request.user, assessment_type="phq9").first()
+    latest_gad7 = Assessment.objects.filter(user=request.user, assessment_type="gad7").first()
+
+    # Chat: find the therapist this client talks to (from latest appointment)
+    chat_therapist = None
+    latest_appt = Appointment.objects.filter(
+        user=request.user,
+        therapist__isnull=False,
+        status__in=("pending", "confirmed", "completed"),
+    ).order_by("-created_at").first()
+    if latest_appt and latest_appt.therapist:
+        chat_therapist = latest_appt.therapist
+
     return render(request, "core/dashboard.html", {
         "profile": profile,
         "today": today,
@@ -348,6 +436,13 @@ def dashboard(request):
         "active_subscription": active_sub,
         "sessions_remaining": request.user.sessions_remaining,
         "sessions_allocated": request.user.sessions_allocated,
+        "affirmations_json": affirmations_json,
+        "unread_notif_count": unread_notif_count,
+        "unread_msg_count": unread_msg_count,
+        "unrated_appointments": unrated_appointments,
+        "latest_phq9": latest_phq9,
+        "latest_gad7": latest_gad7,
+        "chat_therapist": chat_therapist,
     })
 
 
@@ -747,3 +842,330 @@ def instant_test_activate(request):
         f"✅ Demo: Your {plan_info['name']} is now active with {sessions} therapy sessions! You can now book."
     )
     return redirect("appointment_book")
+
+
+# ─── Chat / Messaging (Client Side) ────────────────────────────────────────────
+
+@login_required
+def chat_room(request, therapist_id):
+    """Client chat room with their therapist."""
+    therapist = get_object_or_404(User, id=therapist_id, role__in=["therapist", "admin"])
+
+    # Verify the client has at least one appointment with this therapist
+    has_relationship = Appointment.objects.filter(
+        user=request.user,
+        therapist=therapist,
+    ).exists()
+    if not has_relationship:
+        messages.error(request, "You can only message therapists you've booked sessions with.")
+        return redirect("dashboard")
+
+    # Mark incoming messages as read
+    ChatMessage.objects.filter(
+        sender=therapist, recipient=request.user, is_read=False
+    ).update(is_read=True)
+
+    # Get conversation history
+    from django.db.models import Q
+    chat_messages = ChatMessage.objects.filter(
+        Q(sender=request.user, recipient=therapist) |
+        Q(sender=therapist, recipient=request.user)
+    ).order_by("created_at")
+
+    # Generate Jitsi room name for video calls
+    room_ids = sorted([request.user.id, therapist.id])
+    jitsi_room = f"coeus-session-{room_ids[0]}-{room_ids[1]}"
+
+    # Get therapist display info
+    try:
+        therapist_name = therapist.onboarding.display_name
+    except Exception:
+        therapist_name = therapist.email
+
+    try:
+        profile = request.user.onboarding
+    except Exception:
+        profile = None
+
+    return render(request, "core/chat.html", {
+        "other_user": therapist,
+        "other_name": therapist_name,
+        "messages_list": chat_messages,
+        "jitsi_room": jitsi_room,
+        "profile": profile,
+    })
+
+
+@login_required
+@require_POST
+def chat_send(request, therapist_id):
+    """AJAX: send a message to therapist."""
+    therapist = get_object_or_404(User, id=therapist_id, role__in=["therapist", "admin"])
+    content = request.POST.get("content", "").strip()
+    if content:
+        ChatMessage.objects.create(
+            sender=request.user,
+            recipient=therapist,
+            content=content,
+        )
+        # Create notification for therapist
+        try:
+            display_name = request.user.onboarding.display_name
+        except Exception:
+            display_name = request.user.email
+        create_notification(
+            user=therapist,
+            notification_type="message",
+            title=f"New message from {display_name}",
+            message=content[:100],
+            link=f"/therapist/chat/{request.user.id}/",
+        )
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse({"status": "ok"})
+    return redirect("chat_room", therapist_id=therapist_id)
+
+
+@login_required
+def chat_poll(request, therapist_id):
+    """AJAX: poll for new messages from therapist."""
+    therapist = get_object_or_404(User, id=therapist_id, role__in=["therapist", "admin"])
+    after = request.GET.get("after", "")
+
+    from django.db.models import Q
+    qs = ChatMessage.objects.filter(
+        Q(sender=request.user, recipient=therapist) |
+        Q(sender=therapist, recipient=request.user)
+    )
+
+    if after:
+        try:
+            after_dt = timezone.datetime.fromisoformat(after)
+            qs = qs.filter(created_at__gt=after_dt)
+        except (ValueError, TypeError):
+            pass
+
+    # Mark new incoming as read
+    qs.filter(sender=therapist, recipient=request.user, is_read=False).update(is_read=True)
+
+    new_messages = []
+    for msg in qs.order_by("created_at"):
+        new_messages.append({
+            "id": msg.id,
+            "sender_id": msg.sender_id,
+            "content": msg.content,
+            "is_mine": msg.sender_id == request.user.id,
+            "created_at": msg.created_at.isoformat(),
+            "time": msg.created_at.strftime("%I:%M %p"),
+        })
+
+    return JsonResponse({"messages": new_messages})
+
+
+# ─── Assessments (PHQ-9, GAD-7) ────────────────────────────────────────────────
+
+@login_required
+def assessments_home(request):
+    """Assessment hub: view history, start new assessment."""
+    phq9_history = Assessment.objects.filter(user=request.user, assessment_type="phq9")[:10]
+    gad7_history = Assessment.objects.filter(user=request.user, assessment_type="gad7")[:10]
+
+    try:
+        profile = request.user.onboarding
+    except Exception:
+        profile = None
+
+    return render(request, "core/assessments.html", {
+        "phq9_history": phq9_history,
+        "gad7_history": gad7_history,
+        "profile": profile,
+    })
+
+
+@login_required
+def take_assessment(request, assessment_type):
+    """Take a PHQ-9 or GAD-7 assessment."""
+    if assessment_type not in ("phq9", "gad7"):
+        messages.error(request, "Invalid assessment type.")
+        return redirect("assessments")
+
+    questions = PHQ9_QUESTIONS if assessment_type == "phq9" else GAD7_QUESTIONS
+    type_display = "PHQ-9 (Depression)" if assessment_type == "phq9" else "GAD-7 (Anxiety)"
+    answer_choices = ASSESSMENT_ANSWER_CHOICES
+
+    if request.method == "POST":
+        responses = []
+        total = 0
+        for i in range(len(questions)):
+            val = request.POST.get(f"q{i}", "0")
+            try:
+                score = int(val)
+            except ValueError:
+                score = 0
+            score = max(0, min(3, score))
+            responses.append(score)
+            total += score
+
+        if assessment_type == "phq9":
+            severity = compute_phq9_severity(total)
+        else:
+            severity = compute_gad7_severity(total)
+
+        assessment = Assessment.objects.create(
+            user=request.user,
+            assessment_type=assessment_type,
+            responses=responses,
+            total_score=total,
+            severity=severity,
+        )
+
+        # Create notification
+        create_notification(
+            user=request.user,
+            notification_type="assessment",
+            title=f"{type_display} completed",
+            message=f"Your score: {total} — {assessment.get_severity_display()}. View your results for more details.",
+            link="/assessments/",
+        )
+
+        # Notify therapist if score is concerning
+        if severity in ("moderate", "moderately_severe", "severe"):
+            latest_appt = Appointment.objects.filter(
+                user=request.user,
+                therapist__isnull=False,
+            ).order_by("-created_at").first()
+            if latest_appt and latest_appt.therapist:
+                try:
+                    display_name = request.user.onboarding.display_name
+                except Exception:
+                    display_name = request.user.email
+                create_notification(
+                    user=latest_appt.therapist,
+                    notification_type="assessment",
+                    title=f"⚠ {display_name} scored {severity} on {type_display}",
+                    message=f"Score: {total}. This may require follow-up.",
+                    link=f"/therapist/patient/{request.user.id}/",
+                )
+
+        messages.success(
+            request,
+            f"Assessment complete. Your {type_display} score: {total} ({assessment.get_severity_display()})."
+        )
+        return redirect("assessments")
+
+    try:
+        profile = request.user.onboarding
+    except Exception:
+        profile = None
+
+    return render(request, "core/take_assessment.html", {
+        "assessment_type": assessment_type,
+        "type_display": type_display,
+        "questions": questions,
+        "answer_choices": answer_choices,
+        "profile": profile,
+    })
+
+
+# ─── Notifications ─────────────────────────────────────────────────────────────
+
+@login_required
+def notifications_view(request):
+    """View all notifications."""
+    notifs = Notification.objects.filter(user=request.user)[:50]
+
+    try:
+        profile = request.user.onboarding
+    except Exception:
+        profile = None
+
+    return render(request, "core/notifications.html", {
+        "notifications": notifs,
+        "profile": profile,
+    })
+
+
+@login_required
+@require_POST
+def notification_read(request, notification_id):
+    """Mark a notification as read."""
+    notif = get_object_or_404(Notification, id=notification_id, user=request.user)
+    notif.is_read = True
+    notif.save(update_fields=["is_read"])
+    if notif.link:
+        return redirect(notif.link)
+    return redirect("notifications")
+
+
+@login_required
+def notification_mark_all_read(request):
+    """Mark all notifications as read."""
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    return redirect("notifications")
+
+
+@login_required
+def notification_count(request):
+    """AJAX endpoint: return unread notification count."""
+    count = Notification.objects.filter(user=request.user, is_read=False).count()
+    msg_count = ChatMessage.objects.filter(recipient=request.user, is_read=False).count()
+    return JsonResponse({"unread": count, "messages": msg_count})
+
+
+# ─── Session Rating ────────────────────────────────────────────────────────────
+
+@login_required
+def rate_session(request, appointment_id):
+    """Rate a completed therapy session."""
+    appt = get_object_or_404(
+        Appointment, id=appointment_id, user=request.user, status="completed"
+    )
+
+    # Check if already rated
+    if hasattr(appt, "rating"):
+        messages.info(request, "You've already rated this session.")
+        return redirect("dashboard")
+
+    if request.method == "POST":
+        rating_val = request.POST.get("rating", "5")
+        comment = request.POST.get("comment", "").strip()
+        try:
+            rating_int = int(rating_val)
+            rating_int = max(1, min(5, rating_int))
+        except ValueError:
+            rating_int = 5
+
+        SessionRating.objects.create(
+            user=request.user,
+            therapist=appt.therapist,
+            appointment=appt,
+            rating=rating_int,
+            comment=comment,
+        )
+
+        # Notify therapist
+        if appt.therapist:
+            try:
+                display_name = request.user.onboarding.display_name
+            except Exception:
+                display_name = request.user.email
+            create_notification(
+                user=appt.therapist,
+                notification_type="rating",
+                title=f"{display_name} rated your session {'★' * rating_int}",
+                message=comment[:100] if comment else "No additional comments.",
+                link=f"/therapist/patient/{request.user.id}/",
+            )
+
+        messages.success(request, "Thank you for your feedback!")
+        return redirect("dashboard")
+
+    try:
+        profile = request.user.onboarding
+    except Exception:
+        profile = None
+
+    return render(request, "core/rate_session.html", {
+        "appointment": appt,
+        "profile": profile,
+    })

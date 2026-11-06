@@ -481,6 +481,210 @@ class Subscription(models.Model):
         return True
 
 
+# ─── Chat / Messaging Models ───────────────────────────────────────────────────
+
+class ChatMessage(models.Model):
+    sender = models.ForeignKey(
+        CoeusUser, on_delete=models.CASCADE, related_name="sent_messages"
+    )
+    recipient = models.ForeignKey(
+        CoeusUser, on_delete=models.CASCADE, related_name="received_messages"
+    )
+    content = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.sender.email} → {self.recipient.email} ({self.created_at:%H:%M})"
+
+
+# ─── Assessment Models (PHQ-9, GAD-7) ─────────────────────────────────────────
+
+PHQ9_QUESTIONS = [
+    "Little interest or pleasure in doing things",
+    "Feeling down, depressed, or hopeless",
+    "Trouble falling or staying asleep, or sleeping too much",
+    "Feeling tired or having little energy",
+    "Poor appetite or overeating",
+    "Feeling bad about yourself — or that you are a failure or have let yourself or your family down",
+    "Trouble concentrating on things, such as reading or watching television",
+    "Moving or speaking so slowly that other people could have noticed — or the opposite — being so fidgety or restless",
+    "Thoughts that you would be better off dead, or of hurting yourself in some way",
+]
+
+GAD7_QUESTIONS = [
+    "Feeling nervous, anxious, or on edge",
+    "Not being able to stop or control worrying",
+    "Worrying too much about different things",
+    "Trouble relaxing",
+    "Being so restless that it is hard to sit still",
+    "Becoming easily annoyed or irritable",
+    "Feeling afraid, as if something awful might happen",
+]
+
+ASSESSMENT_ANSWER_CHOICES = [
+    (0, "Not at all"),
+    (1, "Several days"),
+    (2, "More than half the days"),
+    (3, "Nearly every day"),
+]
+
+
+def compute_phq9_severity(score):
+    if score <= 4:
+        return "minimal"
+    elif score <= 9:
+        return "mild"
+    elif score <= 14:
+        return "moderate"
+    elif score <= 19:
+        return "moderately_severe"
+    return "severe"
+
+
+def compute_gad7_severity(score):
+    if score <= 4:
+        return "minimal"
+    elif score <= 9:
+        return "mild"
+    elif score <= 14:
+        return "moderate"
+    return "severe"
+
+
+class Assessment(models.Model):
+    TYPE_CHOICES = [
+        ("phq9", "PHQ-9 (Depression)"),
+        ("gad7", "GAD-7 (Anxiety)"),
+    ]
+    SEVERITY_CHOICES = [
+        ("minimal", "Minimal"),
+        ("mild", "Mild"),
+        ("moderate", "Moderate"),
+        ("moderately_severe", "Moderately severe"),
+        ("severe", "Severe"),
+    ]
+
+    user = models.ForeignKey(
+        CoeusUser, on_delete=models.CASCADE, related_name="assessments"
+    )
+    assessment_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    responses = models.JSONField(default=list)
+    total_score = models.PositiveIntegerField()
+    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.email} — {self.get_assessment_type_display()} ({self.severity}) on {self.created_at:%Y-%m-%d}"
+
+    @property
+    def max_score(self):
+        return 27 if self.assessment_type == "phq9" else 21
+
+    @property
+    def percentage(self):
+        return round((self.total_score / self.max_score) * 100)
+
+    @property
+    def severity_color(self):
+        colors = {
+            "minimal": "#10b981",
+            "mild": "#6ee7b7",
+            "moderate": "#fbbf24",
+            "moderately_severe": "#f97316",
+            "severe": "#ef4444",
+        }
+        return colors.get(self.severity, "#6b7280")
+
+
+# ─── Session Rating ────────────────────────────────────────────────────────────
+
+class SessionRating(models.Model):
+    user = models.ForeignKey(
+        CoeusUser, on_delete=models.CASCADE, related_name="given_ratings"
+    )
+    therapist = models.ForeignKey(
+        CoeusUser, on_delete=models.CASCADE, related_name="received_ratings"
+    )
+    appointment = models.OneToOneField(
+        Appointment, on_delete=models.CASCADE, related_name="rating"
+    )
+    rating = models.PositiveSmallIntegerField()  # 1–5
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.email} rated {self.therapist.email}: {self.rating}/5"
+
+    @property
+    def stars_display(self):
+        return "★" * self.rating + "☆" * (5 - self.rating)
+
+
+# ─── Notifications ─────────────────────────────────────────────────────────────
+
+class Notification(models.Model):
+    TYPE_CHOICES = [
+        ("appointment", "Appointment"),
+        ("message", "New Message"),
+        ("assessment", "Assessment"),
+        ("subscription", "Subscription"),
+        ("rating", "Rating"),
+        ("system", "System"),
+    ]
+
+    user = models.ForeignKey(
+        CoeusUser, on_delete=models.CASCADE, related_name="notifications"
+    )
+    notification_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    link = models.CharField(max_length=500, blank=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"[{self.notification_type}] {self.title} → {self.user.email}"
+
+
+def create_notification(user, notification_type, title, message, link=""):
+    """Helper to create a notification and optionally send an email."""
+    notif = Notification.objects.create(
+        user=user,
+        notification_type=notification_type,
+        title=title,
+        message=message,
+        link=link,
+    )
+    # Attempt email notification (fails gracefully if SMTP not configured)
+    try:
+        from django.core.mail import send_mail
+        send_mail(
+            subject=f"COEUS — {title}",
+            message=message,
+            from_email=None,  # Uses DEFAULT_FROM_EMAIL
+            recipient_list=[user.email],
+            fail_silently=True,
+        )
+    except Exception:
+        pass
+    return notif
+
+
+# ─── Subscription & Payment Models ─────────────────────────────────────────────
+
 class PaymentTransaction(models.Model):
     STATUS_CHOICES = [
         ("pending", "Pending"),

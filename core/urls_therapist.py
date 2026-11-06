@@ -36,4 +36,20 @@ urlpatterns = [
         views.therapist_availability_delete,
         name="therapist_availability_delete",
     ),
+    # Chat & Call
+    path(
+        "chat/<int:patient_id>/",
+        views.therapist_chat,
+        name="therapist_chat",
+    ),
+    path(
+        "chat/<int:patient_id>/send/",
+        views.therapist_chat_send,
+        name="therapist_chat_send",
+    ),
+    path(
+        "chat/<int:patient_id>/poll/",
+        views.therapist_chat_poll,
+        name="therapist_chat_poll",
+    ),
 ]

@@ -1,0 +1,221 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Mental Health Assessments — COEUS{% endblock %}
+
+{% block body %}
+<div class="db-page">
+
+  <!-- Nav -->
+  <nav class="db-nav">
+    <div class="db-nav-inner">
+      <a href="{% url 'dashboard' %}" class="nav-logo">
+        <img src="{% static 'img/coeuslogo.jpeg' %}" alt="COEUS" class="nav-logo-img" />
+      </a>
+      <div class="db-nav-right">
+        <a href="{% url 'dashboard' %}" class="btn btn-outline" style="padding:0.4rem 0.9rem;font-size:0.82rem;">
+          ← Back to Dashboard
+        </a>
+        <a href="{% url 'signout' %}" class="btn btn-outline" style="padding:0.4rem 1rem;font-size:0.82rem;">Sign out</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="db-body" style="max-width:1050px;margin:0 auto;padding-top:85px;">
+
+    <!-- Header -->
+    <header style="margin-bottom:2.25rem;">
+      <span class="section-tag">Clinical Progress Tracking</span>
+      <h1 class="font-serif" style="font-size:clamp(1.75rem,4vw,2.4rem);color:var(--deep-teal);margin:0.4rem 0 0.5rem;">
+        Mental Health Check-in Assessments
+      </h1>
+      <p style="color:var(--text-muted);font-size:1rem;max-width:680px;line-height:1.6;">
+        Standardized, evidence-based questionnaires used worldwide by clinicians to measure depression and anxiety symptom levels over time. Your results help you and your therapist tailor your care.
+      </p>
+    </header>
+
+    <!-- Assessment Action Cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:1.5rem;margin-bottom:2.5rem;">
+      
+      <!-- PHQ-9 Card -->
+      <div class="db-card" style="border:1.5px solid rgba(110,159,174,0.3);background:#FFFFFF;border-radius:20px;box-shadow:var(--shadow-card);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
+          <div style="width:48px;height:48px;border-radius:14px;background:rgba(62,113,137,0.1);display:flex;align-items:center;justify-content:center;font-size:1.5rem;">
+            🌱
+          </div>
+          <span class="db-card-tag" style="background:var(--mist-green);color:var(--deep-teal);border-color:rgba(110,159,174,0.3);">
+            9 Questions · ~3 mins
+          </span>
+        </div>
+        <h3 style="font-size:1.25rem;font-weight:700;color:var(--deep-teal);margin-bottom:0.4rem;">
+          PHQ-9 Depression Screener
+        </h3>
+        <p style="font-size:0.88rem;color:var(--text-muted);line-height:1.55;margin-bottom:1.25rem;">
+          Measures frequency of depressive symptoms such as low energy, sleep difficulties, lack of interest, and mood fluctuations over the last 2 weeks.
+        </p>
+
+        {% if phq9_history %}
+          <div style="background:var(--warm-sand);padding:0.75rem 1rem;border-radius:10px;margin-bottom:1.25rem;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <span style="font-size:0.75rem;color:var(--mist-blue);display:block;">Latest Score</span>
+              <strong style="color:var(--deep-teal);font-size:1.05rem;">
+                {{ phq9_history.0.total_score }} / 27
+              </strong>
+            </div>
+            <span class="tp-badge" style="background:var(--mist-green);color:var(--deep-teal);border:1px solid rgba(110,159,174,0.3);font-size:0.78rem;font-weight:600;">
+              {{ phq9_history.0.get_severity_display }}
+            </span>
+          </div>
+        {% endif %}
+
+        <a href="{% url 'take_assessment' 'phq9' %}" class="btn btn-primary" style="width:100%;text-align:center;padding:0.75rem;color:#fff !important;">
+          Take PHQ-9 Assessment →
+        </a>
+      </div>
+
+      <!-- GAD-7 Card -->
+      <div class="db-card" style="border:1.5px solid rgba(110,159,174,0.3);background:#FFFFFF;border-radius:20px;box-shadow:var(--shadow-card);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
+          <div style="width:48px;height:48px;border-radius:14px;background:rgba(79,193,184,0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;">
+            🌊
+          </div>
+          <span class="db-card-tag" style="background:var(--mist-green);color:var(--deep-teal);border-color:rgba(110,159,174,0.3);">
+            7 Questions · ~2 mins
+          </span>
+        </div>
+        <h3 style="font-size:1.25rem;font-weight:700;color:var(--deep-teal);margin-bottom:0.4rem;">
+          GAD-7 Anxiety Screener
+        </h3>
+        <p style="font-size:0.88rem;color:var(--text-muted);line-height:1.55;margin-bottom:1.25rem;">
+          Measures generalized anxiety symptoms such as uncontrollable worrying, tension, restlessness, and nervousness over the last 2 weeks.
+        </p>
+
+        {% if gad7_history %}
+          <div style="background:var(--warm-sand);padding:0.75rem 1rem;border-radius:10px;margin-bottom:1.25rem;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <span style="font-size:0.75rem;color:var(--mist-blue);display:block;">Latest Score</span>
+              <strong style="color:var(--deep-teal);font-size:1.05rem;">
+                {{ gad7_history.0.total_score }} / 21
+              </strong>
+            </div>
+            <span class="tp-badge" style="background:var(--mist-green);color:var(--deep-teal);border:1px solid rgba(110,159,174,0.3);font-size:0.78rem;font-weight:600;">
+              {{ gad7_history.0.get_severity_display }}
+            </span>
+          </div>
+        {% endif %}
+
+        <a href="{% url 'take_assessment' 'gad7' %}" class="btn btn-primary" style="width:100%;text-align:center;padding:0.75rem;color:#fff !important;">
+          Take GAD-7 Assessment →
+        </a>
+      </div>
+
+    </div>
+
+    <!-- History Tables -->
+    <div style="display:grid;grid-template-columns:1fr;gap:2rem;">
+
+      <!-- PHQ-9 History -->
+      <section class="db-card" style="background:#FFFFFF;border-radius:18px;border:1px solid var(--border);">
+        <div class="db-card-header">
+          <h2 class="db-card-title">🌱 PHQ-9 Depression History</h2>
+          <span class="db-card-tag">{{ phq9_history|length }} recorded</span>
+        </div>
+
+        {% if phq9_history %}
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
+              <thead>
+                <tr style="border-bottom:1.5px solid var(--border);text-align:left;color:var(--mist-blue);font-size:0.75rem;text-transform:uppercase;">
+                  <th style="padding:0.75rem 0.5rem;">Date</th>
+                  <th style="padding:0.75rem 0.5rem;">Score</th>
+                  <th style="padding:0.75rem 0.5rem;">Severity Level</th>
+                  <th style="padding:0.75rem 0.5rem;">Visual Indicator</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in phq9_history %}
+                  <tr style="border-bottom:1px solid rgba(110,159,174,0.15);">
+                    <td style="padding:0.75rem 0.5rem;color:var(--deep-teal);font-weight:600;">
+                      {{ item.created_at|date:"M j, Y · g:i A" }}
+                    </td>
+                    <td style="padding:0.75rem 0.5rem;font-weight:700;color:var(--deep-teal);">
+                      {{ item.total_score }} / 27
+                    </td>
+                    <td style="padding:0.75rem 0.5rem;">
+                      <span style="display:inline-block;padding:0.2rem 0.65rem;border-radius:50px;font-size:0.75rem;font-weight:600;background:{{ item.severity_color }}22;color:{{ item.severity_color }};border:1px solid {{ item.severity_color }}44;">
+                        {{ item.get_severity_display }}
+                      </span>
+                    </td>
+                    <td style="padding:0.75rem 0.5rem;">
+                      <div style="width:140px;height:8px;background:rgba(110,159,174,0.15);border-radius:4px;overflow:hidden;">
+                        <div style="width:{{ item.percentage }}%;height:100%;background:{{ item.severity_color }};"></div>
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="db-empty-card" style="padding:2rem;">
+            <p>No PHQ-9 assessments taken yet. Check in with how you've felt over the past 2 weeks.</p>
+          </div>
+        {% endif %}
+      </section>
+
+      <!-- GAD-7 History -->
+      <section class="db-card" style="background:#FFFFFF;border-radius:18px;border:1px solid var(--border);">
+        <div class="db-card-header">
+          <h2 class="db-card-title">🌊 GAD-7 Anxiety History</h2>
+          <span class="db-card-tag">{{ gad7_history|length }} recorded</span>
+        </div>
+
+        {% if gad7_history %}
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
+              <thead>
+                <tr style="border-bottom:1.5px solid var(--border);text-align:left;color:var(--mist-blue);font-size:0.75rem;text-transform:uppercase;">
+                  <th style="padding:0.75rem 0.5rem;">Date</th>
+                  <th style="padding:0.75rem 0.5rem;">Score</th>
+                  <th style="padding:0.75rem 0.5rem;">Severity Level</th>
+                  <th style="padding:0.75rem 0.5rem;">Visual Indicator</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in gad7_history %}
+                  <tr style="border-bottom:1px solid rgba(110,159,174,0.15);">
+                    <td style="padding:0.75rem 0.5rem;color:var(--deep-teal);font-weight:600;">
+                      {{ item.created_at|date:"M j, Y · g:i A" }}
+                    </td>
+                    <td style="padding:0.75rem 0.5rem;font-weight:700;color:var(--deep-teal);">
+                      {{ item.total_score }} / 21
+                    </td>
+                    <td style="padding:0.75rem 0.5rem;">
+                      <span style="display:inline-block;padding:0.2rem 0.65rem;border-radius:50px;font-size:0.75rem;font-weight:600;background:{{ item.severity_color }}22;color:{{ item.severity_color }};border:1px solid {{ item.severity_color }}44;">
+                        {{ item.get_severity_display }}
+                      </span>
+                    </td>
+                    <td style="padding:0.75rem 0.5rem;">
+                      <div style="width:140px;height:8px;background:rgba(110,159,174,0.15);border-radius:4px;overflow:hidden;">
+                        <div style="width:{{ item.percentage }}%;height:100%;background:{{ item.severity_color }};"></div>
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="db-empty-card" style="padding:2rem;">
+            <p>No GAD-7 assessments taken yet. Check in with your anxiety symptoms.</p>
+          </div>
+        {% endif %}
+      </section>
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+

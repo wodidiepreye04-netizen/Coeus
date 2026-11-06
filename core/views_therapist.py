@@ -6,6 +6,8 @@ from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.conf import settings
 from django.utils import timezone
+from django.http import JsonResponse
+from django.db.models import Q, Avg
 
 from .decorators import therapist_required
 from .forms import SignInForm
@@ -19,6 +21,11 @@ from .models import (
     TherapistAvailability,
     Subscription,
     PaymentTransaction,
+    ChatMessage,
+    Assessment,
+    SessionRating,
+    Notification,
+    create_notification,
     MOOD_EMOJIS,
     MOOD_LABELS,
 )
@@ -119,6 +126,16 @@ def therapist_dashboard(request):
     active_sub_count = Subscription.objects.filter(status="active").count()
     pending_sub_count = pending_subscriptions.count()
 
+    # Ratings stats for this therapist
+    therapist_ratings = SessionRating.objects.filter(therapist=request.user)
+    avg_rating_val = therapist_ratings.aggregate(Avg("rating"))["rating__avg"]
+    avg_rating = round(avg_rating_val, 1) if avg_rating_val else None
+    ratings_count = therapist_ratings.count()
+    recent_ratings = therapist_ratings.select_related("user").order_by("-created_at")[:5]
+
+    # Unread messages for therapist
+    unread_msg_count = ChatMessage.objects.filter(recipient=request.user, is_read=False).count()
+
     # Build availability display grouped by day
     avail_by_day = {}
     for slot in availability:
@@ -140,6 +157,10 @@ def therapist_dashboard(request):
         "availability": availability,
         "avail_by_day": avail_by_day,
         "plans": plans,
+        "avg_rating": avg_rating,
+        "ratings_count": ratings_count,
+        "recent_ratings": recent_ratings,
+        "unread_msg_count": unread_msg_count,
     })
 
 
@@ -240,6 +261,21 @@ def therapist_patient_detail(request, patient_id):
     # Session notes (by any therapist)
     notes = SessionNote.objects.filter(patient=patient).order_by("-created_at")
 
+    # Assessment history (PHQ-9 and GAD-7)
+    assessments = Assessment.objects.filter(user=patient).order_by("-created_at")
+
+    # Ratings given by this patient
+    ratings = SessionRating.objects.filter(user=patient).order_by("-created_at")
+
+    # Unread messages from this patient
+    unread_messages_count = ChatMessage.objects.filter(
+        sender=patient, recipient=request.user, is_read=False
+    ).count()
+
+    # Generate Jitsi call room identifier for direct video/voice calls
+    room_ids = sorted([request.user.id, patient.id])
+    jitsi_room = f"coeus-session-{room_ids[0]}-{room_ids[1]}"
+
     # Handle new note submission
     note_error = None
     if request.method == "POST":
@@ -274,6 +310,10 @@ def therapist_patient_detail(request, patient_id):
         "appointments": appointments,
         "notes": notes,
         "note_error": note_error,
+        "assessments": assessments,
+        "ratings": ratings,
+        "unread_messages_count": unread_messages_count,
+        "jitsi_room": jitsi_room,
         "active_subscription": patient.active_subscription,
         "has_active_subscription": patient.has_active_subscription,
         "sessions_remaining": patient.sessions_remaining,
@@ -371,3 +411,102 @@ def therapist_subscription_action(request, subscription_id):
 
     next_url = request.POST.get("next", "therapist_dashboard")
     return redirect(next_url)
+
+
+# ─── Therapist Chat & Video Call ──────────────────────────────────────────────
+
+@therapist_required
+def therapist_chat(request, patient_id):
+    """Therapist chat room with a patient."""
+    patient = get_object_or_404(User, id=patient_id, role="user")
+
+    # Mark unread messages from this patient as read
+    ChatMessage.objects.filter(
+        sender=patient, recipient=request.user, is_read=False
+    ).update(is_read=True)
+
+    # Conversation history
+    chat_messages = ChatMessage.objects.filter(
+        Q(sender=request.user, recipient=patient) |
+        Q(sender=patient, recipient=request.user)
+    ).order_by("created_at")
+
+    # Jitsi call room identifier (shared algorithm with client)
+    room_ids = sorted([request.user.id, patient.id])
+    jitsi_room = f"coeus-session-{room_ids[0]}-{room_ids[1]}"
+
+    # Patient display name
+    try:
+        patient_name = patient.onboarding.display_name
+    except Exception:
+        patient_name = patient.email
+
+    return render(request, "core/therapist/chat.html", {
+        "active_page": "patients",
+        "patient": patient,
+        "patient_name": patient_name,
+        "messages_list": chat_messages,
+        "jitsi_room": jitsi_room,
+    })
+
+
+@therapist_required
+@require_POST
+def therapist_chat_send(request, patient_id):
+    """AJAX: Therapist sends a message to patient."""
+    patient = get_object_or_404(User, id=patient_id, role="user")
+    content = request.POST.get("content", "").strip()
+    if content:
+        ChatMessage.objects.create(
+            sender=request.user,
+            recipient=patient,
+            content=content,
+        )
+        # Notify patient
+        therapist_name = request.user.get_full_name() or request.user.email
+        create_notification(
+            user=patient,
+            notification_type="message",
+            title=f"Message from your therapist ({therapist_name})",
+            message=content[:100],
+            link=f"/chat/{request.user.id}/",
+        )
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse({"status": "ok"})
+    return redirect("therapist_chat", patient_id=patient_id)
+
+
+@therapist_required
+def therapist_chat_poll(request, patient_id):
+    """AJAX: Therapist polls for new messages from patient."""
+    patient = get_object_or_404(User, id=patient_id, role="user")
+    after = request.GET.get("after", "")
+
+    qs = ChatMessage.objects.filter(
+        Q(sender=request.user, recipient=patient) |
+        Q(sender=patient, recipient=request.user)
+    )
+
+    if after:
+        try:
+            after_dt = timezone.datetime.fromisoformat(after)
+            qs = qs.filter(created_at__gt=after_dt)
+        except (ValueError, TypeError):
+            pass
+
+    # Mark incoming as read
+    qs.filter(sender=patient, recipient=request.user, is_read=False).update(is_read=True)
+
+    new_messages = []
+    for msg in qs.order_by("created_at"):
+        new_messages.append({
+            "id": msg.id,
+            "sender_id": msg.sender_id,
+            "content": msg.content,
+            "is_mine": msg.sender_id == request.user.id,
+            "created_at": msg.created_at.isoformat(),
+            "time": msg.created_at.strftime("%I:%M %p"),
+        })
+
+    return JsonResponse({"messages": new_messages})

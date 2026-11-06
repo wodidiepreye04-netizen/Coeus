@@ -4,6 +4,7 @@ from .models import (
     CoeusUser, OnboardingProfile, TherapistProfile,
     TherapistAvailability, SessionNote, Appointment, MoodEntry,
     Subscription, PaymentTransaction,
+    ChatMessage, Assessment, SessionRating, Notification,
 )
 
 
@@ -79,3 +80,31 @@ class PaymentTransactionAdmin(admin.ModelAdmin):
     list_display = ("reference", "user", "amount", "currency", "channel", "status", "created_at")
     list_filter = ("status", "channel", "currency")
     search_fields = ("reference", "user__email")
+
+
+@admin.register(ChatMessage)
+class ChatMessageAdmin(admin.ModelAdmin):
+    list_display = ("sender", "recipient", "is_read", "created_at")
+    list_filter = ("is_read", "created_at")
+    search_fields = ("sender__email", "recipient__email", "content")
+
+
+@admin.register(Assessment)
+class AssessmentAdmin(admin.ModelAdmin):
+    list_display = ("user", "assessment_type", "total_score", "severity", "created_at")
+    list_filter = ("assessment_type", "severity", "created_at")
+    search_fields = ("user__email",)
+
+
+@admin.register(SessionRating)
+class SessionRatingAdmin(admin.ModelAdmin):
+    list_display = ("user", "therapist", "rating", "created_at")
+    list_filter = ("rating", "created_at")
+    search_fields = ("user__email", "therapist__email", "comment")
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ("user", "notification_type", "title", "is_read", "created_at")
+    list_filter = ("notification_type", "is_read", "created_at")
+    search_fields = ("user__email", "title", "message")

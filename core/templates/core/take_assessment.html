@@ -1,0 +1,78 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Take {{ type_display }} — COEUS{% endblock %}
+
+{% block body %}
+<div class="db-page">
+
+  <!-- Nav -->
+  <nav class="db-nav">
+    <div class="db-nav-inner">
+      <a href="{% url 'dashboard' %}" class="nav-logo">
+        <img src="{% static 'img/coeuslogo.jpeg' %}" alt="COEUS" class="nav-logo-img" />
+      </a>
+      <div class="db-nav-right">
+        <a href="{% url 'assessments' %}" class="btn btn-outline" style="padding:0.4rem 0.9rem;font-size:0.82rem;">
+          ← Back to Assessments
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="db-body" style="max-width:780px;margin:0 auto;padding-top:85px;">
+
+    <header style="margin-bottom:2rem;text-align:center;">
+      <span class="section-tag">{{ type_display }}</span>
+      <h1 class="font-serif" style="font-size:clamp(1.6rem,4vw,2.2rem);color:var(--deep-teal);margin:0.4rem 0 0.5rem;">
+        Clinical Questionnaire
+      </h1>
+      <p style="color:var(--text-muted);font-size:0.95rem;line-height:1.6;max-width:620px;margin:0 auto;">
+        <em>Over the last 2 weeks</em>, how often have you been bothered by any of the following problems? Answer as honestly as you can — this is a safe, confidential space.
+      </p>
+    </header>
+
+    <form method="post" class="db-card" style="background:#FFFFFF;border-radius:24px;border:1.5px solid rgba(110,159,174,0.3);padding:2rem;box-shadow:var(--shadow-card);">
+      {% csrf_token %}
+
+      <div style="display:flex;flex-direction:column;gap:1.75rem;">
+        {% for question in questions %}
+          <div style="padding-bottom:1.5rem;border-bottom:1px solid rgba(110,159,174,0.15);">
+            <div style="display:flex;gap:0.75rem;align-items:flex-start;margin-bottom:1rem;">
+              <span style="width:28px;height:28px;border-radius:50%;background:var(--mist-green);color:var(--deep-teal);display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;flex-shrink:0;">
+                {{ forloop.counter }}
+              </span>
+              <p style="font-size:0.98rem;font-weight:600;color:var(--deep-teal);line-height:1.5;margin:0;">
+                {{ question }}
+              </p>
+            </div>
+
+            <!-- Radio choices grid -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:0.5rem;padding-left:2.5rem;">
+              {% for val, label in answer_choices %}
+                <label style="display:flex;align-items:center;gap:0.5rem;padding:0.6rem 0.8rem;border-radius:10px;background:var(--mist-green);border:1.5px solid rgba(110,159,174,0.25);cursor:pointer;font-size:0.82rem;font-weight:500;color:var(--deep-teal);transition:all 0.15s;">
+                  <input type="radio" name="q{{ forloop.parentloop.counter0 }}" value="{{ val }}" {% if val == 0 %}checked{% endif %} style="accent-color:var(--coeus-blue);" />
+                  <span>{{ label }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div style="margin-top:2rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+        <span style="font-size:0.78rem;color:var(--text-subtle);">
+          🔒 Stored securely and shared only with your treating clinician.
+        </span>
+        <button type="submit" class="btn btn-primary btn-lg" style="color:#fff !important;padding:0.85rem 2rem;">
+          Complete Assessment & View Results →
+        </button>
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+{% endblock %}
+

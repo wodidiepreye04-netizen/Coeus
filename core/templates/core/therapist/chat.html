@@ -1,0 +1,216 @@
+{% extends "core/therapist/base.html" %}
+{% load static %}
+
+{% block title %}Chat with {{ patient_name }} — COEUS Therapist{% endblock %}
+
+{% block content %}
+<div class="tp-page" style="display:flex;flex-direction:column;height:calc(100vh - 4rem);">
+
+  <!-- Breadcrumb & Header -->
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;">
+    <div style="display:flex;align-items:center;gap:0.75rem;">
+      <a href="{% url 'therapist_patient_detail' patient.id %}" class="tp-btn tp-btn--outline tp-btn--sm">
+        ← Patient File
+      </a>
+      <div>
+        <h1 class="tp-page-title" style="margin:0;font-size:1.35rem;">Chat with {{ patient_name }}</h1>
+        <span style="font-size:0.75rem;color:var(--text-subtle);">{{ patient.email }}</span>
+      </div>
+    </div>
+
+    <!-- Call Controls -->
+    <div style="display:flex;align-items:center;gap:0.6rem;">
+      <button type="button" id="start-call-btn" class="tp-btn tp-btn--confirm" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.45rem 0.95rem;font-size:0.85rem;">
+        <span>🎥</span><span>Start Video / Audio Call</span>
+      </button>
+      <a href="https://meet.jit.si/{{ jitsi_room }}" target="_blank" rel="noopener noreferrer" class="tp-btn tp-btn--outline tp-btn--sm">
+        ↗ Open Fullscreen
+      </a>
+    </div>
+  </div>
+
+  <!-- Messages Card -->
+  <div class="tp-card" style="flex:1;display:flex;flex-direction:column;padding:0;overflow:hidden;border:1.5px solid var(--border);">
+    
+    <!-- Top info bar -->
+    <div style="background:rgba(255,255,255,0.02);padding:0.65rem 1.25rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;">
+      <span style="color:var(--text-subtle);">🔒 Direct encrypted session chat · Messages are retained for clinical record</span>
+      <span style="color:var(--accent);">Active Room: <code>{{ jitsi_room }}</code></span>
+    </div>
+
+    <!-- Chat Message List -->
+    <div id="messages-box" style="flex:1;overflow-y:auto;padding:1.25rem;display:flex;flex-direction:column;gap:0.85rem;">
+      {% for msg in messages_list %}
+        <div class="chat-bubble-wrap {% if msg.sender_id == request.user.id %}mine{% else %}theirs{% endif %}" data-created="{{ msg.created_at|date:'c' }}"
+             style="display:flex;flex-direction:column;max-width:75%;{% if msg.sender_id == request.user.id %}align-self:flex-end;align-items:flex-end;{% else %}align-self:flex-start;align-items:flex-start;{% endif %}">
+          <div style="padding:0.75rem 1.1rem;border-radius:18px;font-size:0.9rem;line-height:1.5;word-break:break-word;
+                      {% if msg.sender_id == request.user.id %}background:var(--coeus-blue);color:#FFFFFF;border-bottom-right-radius:4px;{% else %}background:rgba(255,255,255,0.06);color:var(--text-primary);border:1px solid var(--border);border-bottom-left-radius:4px;{% endif %}">
+            {{ msg.content }}
+          </div>
+          <span style="font-size:0.7rem;color:var(--text-subtle);margin-top:0.25rem;padding:0 0.35rem;">
+            {% if msg.sender_id == request.user.id %}You{% else %}{{ patient_name }}{% endif %} · {{ msg.created_at|date:"g:i A" }}
+          </span>
+        </div>
+      {% empty %}
+        <div id="empty-state" class="tp-empty" style="margin:auto;text-align:center;">
+          <span style="font-size:2.2rem;display:block;margin-bottom:0.5rem;">💬</span>
+          <p>No messages yet with this patient.</p>
+          <p style="font-size:0.8rem;color:var(--text-subtle);margin-top:0.25rem;">Type a welcome message below or initiate a call.</p>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Chat Input Form -->
+    <div style="background:rgba(0,0,0,0.15);padding:0.85rem 1.25rem;border-top:1px solid var(--border);">
+      <form id="chat-form" method="post" action="{% url 'therapist_chat_send' patient.id %}" style="display:flex;gap:0.65rem;">
+        {% csrf_token %}
+        <input type="text" name="content" id="message-input" placeholder="Type a message to {{ patient_name }}…" required autocomplete="off"
+               class="tp-search-input" style="flex:1;padding:0.75rem 1.15rem;font-size:0.92rem;background:#111827;border-radius:25px;border:1.5px solid var(--border);color:#fff;" />
+        <button type="submit" class="tp-btn tp-btn--primary" style="border-radius:25px;padding:0.75rem 1.5rem;font-size:0.88rem;">
+          Send ➤
+        </button>
+      </form>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Jitsi Meet Video Call Modal -->
+<div id="call-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(15,23,42,0.8);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#111827;border-radius:20px;border:1px solid var(--border);width:100%;max-width:980px;height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;background:#1f2937;border-bottom:1px solid rgba(255,255,255,0.08);color:#fff;">
+      <div style="display:flex;align-items:center;gap:0.6rem;">
+        <span style="font-size:1.25rem;">🎥</span>
+        <div>
+          <strong style="font-size:0.95rem;">COEUS Clinical Telehealth Session</strong>
+          <span style="display:block;font-size:0.75rem;color:var(--text-subtle);">In call with {{ patient_name }} ({{ patient.email }})</span>
+        </div>
+      </div>
+      <button type="button" id="close-call-btn" style="background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;padding:0.2rem 0.6rem;">✕</button>
+    </div>
+    <div style="flex:1;position:relative;background:#000;">
+      <iframe id="call-frame" style="width:100%;height:100%;border:none;" allow="camera; microphone; fullscreen; display-capture; autoplay" src=""></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+  const messagesBox = document.getElementById('messages-box');
+  const chatForm = document.getElementById('chat-form');
+  const messageInput = document.getElementById('message-input');
+  const emptyState = document.getElementById('empty-state');
+  const startCallBtn = document.getElementById('start-call-btn');
+  const callModal = document.getElementById('call-modal');
+  const closeCallBtn = document.getElementById('close-call-btn');
+  const callFrame = document.getElementById('call-frame');
+  const jitsiRoomUrl = "https://meet.jit.si/{{ jitsi_room }}#config.prejoinPageEnabled=false&config.disableDeepLinking=true";
+
+  function scrollToBottom() {
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+  }
+  scrollToBottom();
+
+  startCallBtn.addEventListener('click', () => {
+    callFrame.src = jitsiRoomUrl;
+    callModal.style.display = 'flex';
+  });
+
+  closeCallBtn.addEventListener('click', () => {
+    callFrame.src = "";
+    callModal.style.display = 'none';
+  });
+
+  let latestTimestamp = "";
+  const existingBubbles = document.querySelectorAll('.chat-bubble-wrap');
+  if (existingBubbles.length > 0) {
+    const last = existingBubbles[existingBubbles.length - 1];
+    latestTimestamp = last.getAttribute('data-created') || "";
+  }
+
+  chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const content = messageInput.value.trim();
+    if (!content) return;
+
+    messageInput.value = "";
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const wrap = document.createElement('div');
+    wrap.className = 'chat-bubble-wrap mine';
+    wrap.setAttribute('data-created', now.toISOString());
+    wrap.style.display = 'flex';
+    wrap.style.flexDirection = 'column';
+    wrap.style.maxWidth = '75%';
+    wrap.style.alignSelf = 'flex-end';
+    wrap.style.alignItems = 'flex-end';
+    wrap.innerHTML = `
+      <div style="padding:0.75rem 1.1rem;border-radius:18px;font-size:0.9rem;line-height:1.5;word-break:break-word;background:var(--coeus-blue);color:#FFFFFF;border-bottom-right-radius:4px;">
+        ${escapeHtml(content)}
+      </div>
+      <span style="font-size:0.7rem;color:var(--text-subtle);margin-top:0.25rem;padding:0 0.35rem;">You · ${timeStr}</span>
+    `;
+    if (emptyState) emptyState.remove();
+    messagesBox.appendChild(wrap);
+    scrollToBottom();
+
+    const formData = new FormData(chatForm);
+    formData.set('content', content);
+
+    try {
+      await fetch(chatForm.action, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      latestTimestamp = now.toISOString();
+    } catch (err) {
+      console.error('Error sending message:', err);
+    }
+  });
+
+  async function pollMessages() {
+    try {
+      const url = `{% url 'therapist_chat_poll' patient.id %}?after=${encodeURIComponent(latestTimestamp)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.messages && data.messages.length > 0) {
+        if (emptyState) emptyState.remove();
+        data.messages.forEach(msg => {
+          if (!msg.is_mine) {
+            const wrap = document.createElement('div');
+            wrap.className = 'chat-bubble-wrap theirs';
+            wrap.setAttribute('data-created', msg.created_at);
+            wrap.style.display = 'flex';
+            wrap.style.flexDirection = 'column';
+            wrap.style.maxWidth = '75%';
+            wrap.style.alignSelf = 'flex-start';
+            wrap.style.alignItems = 'flex-start';
+            wrap.innerHTML = `
+              <div style="padding:0.75rem 1.1rem;border-radius:18px;font-size:0.9rem;line-height:1.5;word-break:break-word;background:rgba(255,255,255,0.06);color:var(--text-primary);border:1px solid var(--border);border-bottom-left-radius:4px;">
+                ${escapeHtml(msg.content)}
+              </div>
+              <span style="font-size:0.7rem;color:var(--text-subtle);margin-top:0.25rem;padding:0 0.35rem;">{{ patient_name }} · ${msg.time}</span>
+            `;
+            messagesBox.appendChild(wrap);
+          }
+          latestTimestamp = msg.created_at;
+        });
+        scrollToBottom();
+      }
+    } catch (e) {
+      // ignore network errors
+    }
+  }
+
+  setInterval(pollMessages, 3000);
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+</script>
+{% endblock %}
+

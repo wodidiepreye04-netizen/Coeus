@@ -1,0 +1,132 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Rate Your Therapy Session — COEUS{% endblock %}
+
+{% block body %}
+<div class="db-page">
+
+  <!-- Nav -->
+  <nav class="db-nav">
+    <div class="db-nav-inner">
+      <a href="{% url 'dashboard' %}" class="nav-logo">
+        <img src="{% static 'img/coeuslogo.jpeg' %}" alt="COEUS" class="nav-logo-img" />
+      </a>
+      <div class="db-nav-right">
+        <a href="{% url 'dashboard' %}" class="btn btn-outline" style="padding:0.4rem 0.9rem;font-size:0.82rem;">
+          ← Dashboard
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="db-body" style="max-width:620px;margin:0 auto;padding-top:85px;">
+
+    <header style="margin-bottom:2rem;text-align:center;">
+      <span class="section-tag">Session Feedback</span>
+      <h1 class="font-serif" style="font-size:clamp(1.6rem,4vw,2.2rem);color:var(--deep-teal);margin:0.4rem 0 0.5rem;">
+        How was your session?
+      </h1>
+      <p style="color:var(--text-muted);font-size:0.95rem;line-height:1.5;">
+        Your honest feedback helps your clinician understand how to best support you and maintains our standard of compassionate care.
+      </p>
+    </header>
+
+    <div class="db-card" style="background:#FFFFFF;border-radius:24px;border:1.5px solid rgba(110,159,174,0.3);padding:2rem;box-shadow:var(--shadow-card);">
+      
+      <!-- Session summary -->
+      <div style="background:var(--warm-sand);padding:1rem 1.25rem;border-radius:12px;margin-bottom:1.5rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+        <div>
+          <span style="font-size:0.75rem;color:var(--mist-blue);display:block;">Therapist</span>
+          <strong style="color:var(--deep-teal);font-size:0.95rem;">
+            {{ appointment.therapist.get_full_name|default:appointment.therapist.email }}
+          </strong>
+        </div>
+        <div style="text-align:right;">
+          <span style="font-size:0.75rem;color:var(--mist-blue);display:block;">Session Date</span>
+          <span style="font-size:0.85rem;color:var(--deep-teal);font-weight:600;">
+            {{ appointment.appointment_date|date:"M j, Y" }}
+          </span>
+        </div>
+      </div>
+
+      <form method="post">
+        {% csrf_token %}
+
+        <!-- Star Rating Picker -->
+        <div style="margin-bottom:1.75rem;text-align:center;">
+          <label style="display:block;font-size:0.88rem;font-weight:600;color:var(--deep-teal);margin-bottom:0.75rem;">
+            Overall Experience Rating
+          </label>
+          <div id="star-container" style="display:inline-flex;gap:0.5rem;font-size:2.2rem;cursor:pointer;user-select:none;">
+            <span class="star" data-val="1" style="color:#fbbf24;">★</span>
+            <span class="star" data-val="2" style="color:#fbbf24;">★</span>
+            <span class="star" data-val="3" style="color:#fbbf24;">★</span>
+            <span class="star" data-val="4" style="color:#fbbf24;">★</span>
+            <span class="star" data-val="5" style="color:#fbbf24;">★</span>
+          </div>
+          <input type="hidden" name="rating" id="rating-input" value="5" />
+          <p id="rating-label" style="font-size:0.82rem;color:var(--coeus-blue);font-weight:600;margin-top:0.4rem;">
+            5 / 5 — Excellent & Supportive
+          </p>
+        </div>
+
+        <!-- Feedback Comments -->
+        <div style="margin-bottom:1.5rem;">
+          <label for="comment" style="display:block;font-size:0.85rem;font-weight:600;color:var(--deep-teal);margin-bottom:0.4rem;">
+            What was most helpful, or what could be improved? (Optional)
+          </label>
+          <textarea name="comment" id="comment" rows="4" class="db-textarea"
+                    placeholder="Share any reflections on your session, communication, exercises, or pace..."></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" style="padding:0.85rem;color:#fff !important;font-size:0.95rem;">
+          Submit Review
+        </button>
+      </form>
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const stars = document.querySelectorAll('#star-container .star');
+  const ratingInput = document.getElementById('rating-input');
+  const ratingLabel = document.getElementById('rating-label');
+
+  const labels = {
+    1: '1 / 5 — Did not meet expectations',
+    2: '2 / 5 — Needs improvement',
+    3: '3 / 5 — Satisfactory / Okay',
+    4: '4 / 5 — Very Good & Helpful',
+    5: '5 / 5 — Excellent & Supportive'
+  };
+
+  function updateStars(val) {
+    stars.forEach(s => {
+      const sVal = parseInt(s.getAttribute('data-val'));
+      if (sVal <= val) {
+        s.style.color = '#fbbf24';
+        s.textContent = '★';
+      } else {
+        s.style.color = '#cbd5e1';
+        s.textContent = '☆';
+      }
+    });
+    ratingLabel.textContent = labels[val] || `${val} / 5`;
+  }
+
+  stars.forEach(s => {
+    s.addEventListener('click', () => {
+      const val = parseInt(s.getAttribute('data-val'));
+      ratingInput.value = val;
+      updateStars(val);
+    });
+  });
+</script>
+{% endblock %}
+

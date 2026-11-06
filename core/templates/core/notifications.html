@@ -1,0 +1,112 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Notifications — COEUS{% endblock %}
+
+{% block body %}
+<div class="db-page">
+
+  <!-- Nav -->
+  <nav class="db-nav">
+    <div class="db-nav-inner">
+      <a href="{% url 'dashboard' %}" class="nav-logo">
+        <img src="{% static 'img/coeuslogo.jpeg' %}" alt="COEUS" class="nav-logo-img" />
+      </a>
+      <div class="db-nav-right">
+        <a href="{% url 'dashboard' %}" class="btn btn-outline" style="padding:0.4rem 0.9rem;font-size:0.82rem;">
+          ← Dashboard
+        </a>
+        <a href="{% url 'signout' %}" class="btn btn-outline" style="padding:0.4rem 1rem;font-size:0.82rem;">Sign out</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="db-body" style="max-width:760px;margin:0 auto;padding-top:85px;">
+
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.75rem;">
+      <div>
+        <h1 class="font-serif" style="font-size:1.8rem;color:var(--deep-teal);margin:0;">
+          Notifications
+        </h1>
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-top:0.2rem;">
+          Updates on your appointments, messages, care assessments, and subscriptions.
+        </p>
+      </div>
+
+      {% if notifications %}
+        <a href="{% url 'notification_mark_all_read' %}" class="btn btn-outline" style="padding:0.4rem 0.85rem;font-size:0.82rem;">
+          ✓ Mark All as Read
+        </a>
+      {% endif %}
+    </div>
+
+    <!-- Notification Feed -->
+    <div class="db-card" style="background:#FFFFFF;border-radius:20px;border:1.5px solid rgba(110,159,174,0.25);padding:0;overflow:hidden;box-shadow:var(--shadow-card);">
+      {% for notif in notifications %}
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:1.15rem 1.25rem;border-bottom:1px solid rgba(110,159,174,0.15);{% if not notif.is_read %}background:rgba(227,242,238,0.35);{% endif %}transition:background 0.2s;">
+          
+          <div style="display:flex;align-items:flex-start;gap:0.85rem;">
+            <!-- Icon by type -->
+            <div style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0;
+                        {% if notif.notification_type == 'message' %}background:rgba(62,113,137,0.15);color:var(--coeus-blue);
+                        {% elif notif.notification_type == 'appointment' %}background:rgba(16,185,129,0.15);color:#10b981;
+                        {% elif notif.notification_type == 'assessment' %}background:rgba(224,164,74,0.15);color:var(--calm-amber);
+                        {% else %}background:var(--mist-green);color:var(--deep-teal);{% endif %}">
+              {% if notif.notification_type == 'message' %}💬
+              {% elif notif.notification_type == 'appointment' %}🗓️
+              {% elif notif.notification_type == 'assessment' %}📊
+              {% elif notif.notification_type == 'rating' %}⭐
+              {% elif notif.notification_type == 'subscription' %}💳
+              {% else %}🔔{% endif %}
+            </div>
+
+            <div>
+              <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                <strong style="color:var(--deep-teal);font-size:0.92rem;">{{ notif.title }}</strong>
+                {% if not notif.is_read %}
+                  <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--coeus-blue);"></span>
+                {% endif %}
+              </div>
+              <p style="font-size:0.85rem;color:var(--text-muted);margin:0.25rem 0 0.35rem;line-height:1.5;">
+                {{ notif.message }}
+              </p>
+              <span style="font-size:0.72rem;color:var(--mist-blue);">
+                {{ notif.created_at|date:"M j, Y · g:i A" }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Action link -->
+          <div style="flex-shrink:0;">
+            {% if notif.link %}
+              <form method="post" action="{% url 'notification_read' notif.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline" style="padding:0.35rem 0.75rem;font-size:0.78rem;">
+                  View →
+                </button>
+              </form>
+            {% elif not notif.is_read %}
+              <form method="post" action="{% url 'notification_read' notif.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline" style="padding:0.35rem 0.65rem;font-size:0.75rem;">
+                  Dismiss
+                </button>
+              </form>
+            {% endif %}
+          </div>
+
+        </div>
+      {% empty %}
+        <div class="db-empty-card" style="padding:3.5rem 1rem;">
+          <span class="db-empty-icon">🔔</span>
+          <p>No notifications yet. You're all caught up!</p>
+        </div>
+      {% endfor %}
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+

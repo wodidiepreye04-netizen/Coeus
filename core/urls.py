@@ -32,4 +32,22 @@ urlpatterns = [
     path("subscribe/", views.subscribe_view, name="subscribe"),
     path("subscribe/bank-transfer/", views.bank_transfer_submit, name="bank_transfer_submit"),
     path("subscribe/test-activate/", views.instant_test_activate, name="instant_test_activate"),
+
+    # Real-Time Chat & Video Calls
+    path("chat/<int:therapist_id>/", views.chat_room, name="chat_room"),
+    path("chat/<int:therapist_id>/send/", views.chat_send, name="chat_send"),
+    path("chat/<int:therapist_id>/poll/", views.chat_poll, name="chat_poll"),
+
+    # Assessments (PHQ-9 & GAD-7)
+    path("assessments/", views.assessments_home, name="assessments"),
+    path("assessments/<str:assessment_type>/", views.take_assessment, name="take_assessment"),
+
+    # Notifications
+    path("notifications/", views.notifications_view, name="notifications"),
+    path("notifications/<int:notification_id>/read/", views.notification_read, name="notification_read"),
+    path("notifications/mark-all-read/", views.notification_mark_all_read, name="notification_mark_all_read"),
+    path("api/notifications/count/", views.notification_count, name="notification_count"),
+
+    # Ratings
+    path("appointments/<int:appointment_id>/rate/", views.rate_session, name="rate_session"),
 ]

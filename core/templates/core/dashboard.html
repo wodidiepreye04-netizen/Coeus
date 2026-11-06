@@ -13,6 +13,27 @@
         <img src="{% static 'img/coeuslogo.jpeg' %}" alt="COEUS" class="nav-logo-img" />
       </a>
       <div class="db-nav-right">
+        {% if chat_therapist %}
+          <a href="{% url 'chat_room' chat_therapist.id %}" class="btn btn-outline" style="padding:0.4rem 0.85rem;font-size:0.82rem;display:inline-flex;align-items:center;gap:0.35rem;position:relative;">
+            <span>💬</span><span>Chat</span>
+            {% if unread_msg_count > 0 %}
+              <span style="background:#ef4444;color:#fff;border-radius:50%;width:18px;height:18px;font-size:0.7rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-left:0.2rem;">
+                {{ unread_msg_count }}
+              </span>
+            {% endif %}
+          </a>
+        {% endif %}
+        <a href="{% url 'assessments' %}" class="btn btn-outline" style="padding:0.4rem 0.85rem;font-size:0.82rem;display:inline-flex;align-items:center;gap:0.35rem;">
+          <span>📊</span><span>Assessments</span>
+        </a>
+        <a href="{% url 'notifications' %}" class="btn btn-outline" style="padding:0.4rem 0.85rem;font-size:0.82rem;display:inline-flex;align-items:center;gap:0.35rem;position:relative;">
+          <span>🔔</span>
+          {% if unread_notif_count > 0 %}
+            <span style="background:var(--coeus-blue);color:#fff;border-radius:50%;width:18px;height:18px;font-size:0.7rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-left:0.2rem;">
+              {{ unread_notif_count }}
+            </span>
+          {% endif %}
+        </a>
         <a href="{% url 'journal_vault' %}" class="btn btn-outline" style="padding:0.4rem 0.9rem;font-size:0.82rem;display:inline-flex;align-items:center;gap:0.35rem;">
           <span>📓</span><span>Journal Vault</span>
         </a>
@@ -68,6 +89,60 @@
         </div>
       </div>
     </header>
+
+    <!-- ── Unrated Sessions Notification Banner ── -->
+    {% if unrated_appointments %}
+      {% for appt in unrated_appointments %}
+        <div style="background:linear-gradient(135deg, rgba(224,164,74,0.12), rgba(244,239,232,0.6));border:1.5px solid var(--calm-amber);border-radius:16px;padding:0.95rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;box-shadow:var(--shadow-subtle);">
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <span style="font-size:1.6rem;">⭐</span>
+            <div>
+              <strong style="color:var(--deep-teal);font-size:0.95rem;">
+                Rate your session with {{ appt.therapist.get_full_name|default:appt.therapist.email }}
+              </strong>
+              <p style="font-size:0.8rem;color:var(--text-muted);margin:0.15rem 0 0;">
+                Your session on {{ appt.appointment_date|date:"F j, Y" }} was completed. How was your experience?
+              </p>
+            </div>
+          </div>
+          <a href="{% url 'rate_session' appt.id %}" class="btn btn-primary" style="padding:0.45rem 1.15rem;font-size:0.85rem;color:#fff !important;">
+            Leave a Review →
+          </a>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- ── Constantly Rotating Daily Affirmation Spotlight ── -->
+    <section class="db-card" style="background:linear-gradient(135deg, rgba(227,242,238,0.7) 0%, rgba(244,239,232,0.5) 100%);border:1.5px solid rgba(110,159,174,0.35);border-radius:20px;padding:1.25rem 1.75rem;margin-bottom:1.75rem;box-shadow:var(--shadow-subtle);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <span style="font-size:1.1rem;">✨</span>
+          <span style="font-size:0.75rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--coeus-blue);">
+            Living Affirmation · Constantly Changing
+          </span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.4rem;">
+          <button type="button" id="affirmation-prev" class="btn btn-outline" style="padding:0.2rem 0.55rem;font-size:0.75rem;border-radius:50px;" title="Previous affirmation">←</button>
+          <button type="button" id="affirmation-pause" class="btn btn-outline" style="padding:0.2rem 0.65rem;font-size:0.75rem;border-radius:50px;" title="Pause / Resume auto-change">⏸</button>
+          <button type="button" id="affirmation-next" class="btn btn-outline" style="padding:0.2rem 0.55rem;font-size:0.75rem;border-radius:50px;" title="Next affirmation">→</button>
+        </div>
+      </div>
+
+      <div style="min-height:54px;display:flex;align-items:center;">
+        <blockquote id="affirmation-text" style="font-family:'Plus Jakarta Sans',sans-serif;font-size:1.2rem;font-weight:600;color:var(--deep-teal);line-height:1.45;margin:0;transition:opacity 0.4s ease, transform 0.4s ease;">
+          "I am worthy of rest and healing."
+        </blockquote>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.65rem;padding-top:0.5rem;border-top:1px solid rgba(110,159,174,0.2);">
+        <span id="affirmation-counter" style="font-size:0.72rem;color:var(--mist-blue);">
+          Affirmation 1 of 50
+        </span>
+        <span style="font-size:0.72rem;color:var(--mist-blue);">
+          Rotates automatically every 8 seconds
+        </span>
+      </div>
+    </section>
 
     <!-- ── Grid ── -->
     <div class="db-grid">
@@ -426,20 +501,103 @@
             </div>
           {% endif %}
 
-          <!-- Message therapist -->
+          <!-- Message & Call Therapist -->
           <div class="msg-therapist" style="margin-top:1.5rem;">
-            <p class="db-section-label">Message your therapist</p>
-            {% if upcoming %}
-              <div class="msg-locked">
-                <span>🔒</span>
-                <p>Direct chat unlocks during active sessions with your clinician.</p>
+            <p class="db-section-label">Clinician Communication & Telehealth</p>
+            {% if chat_therapist %}
+              <div style="background:var(--mist-green);border:1.5px solid rgba(110,159,174,0.3);border-radius:var(--radius-sm);padding:1rem 1.15rem;">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.85rem;">
+                  <div style="display:flex;align-items:center;gap:0.65rem;">
+                    <div style="width:38px;height:38px;border-radius:50%;background:#FFFFFF;border:1.5px solid rgba(110,159,174,0.3);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">
+                      👨‍⚕️
+                    </div>
+                    <div>
+                      <strong style="color:var(--deep-teal);font-size:0.92rem;display:block;">
+                        {{ chat_therapist.get_full_name|default:chat_therapist.email }}
+                      </strong>
+                      <span style="font-size:0.75rem;color:#10b981;display:flex;align-items:center;gap:0.25rem;">
+                        ● Active Clinician Partner
+                      </span>
+                    </div>
+                  </div>
+
+                  {% if unread_msg_count > 0 %}
+                    <span style="background:#ef4444;color:#fff;font-size:0.75rem;font-weight:700;padding:0.2rem 0.6rem;border-radius:50px;">
+                      {{ unread_msg_count }} unread message{{ unread_msg_count|pluralize }}
+                    </span>
+                  {% endif %}
+                </div>
+
+                <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+                  <a href="{% url 'chat_room' chat_therapist.id %}" class="btn btn-primary" style="flex:1;min-width:140px;padding:0.5rem 0.85rem;font-size:0.82rem;color:#fff !important;justify-content:center;gap:0.35rem;">
+                    <span>💬</span><span>Open Chat Room</span>
+                  </a>
+                  <a href="https://meet.jit.si/coeus-session-{% if request.user.id < chat_therapist.id %}{{ request.user.id }}-{{ chat_therapist.id }}{% else %}{{ chat_therapist.id }}-{{ request.user.id }}{% endif %}" target="_blank" rel="noopener noreferrer" class="btn btn-outline" style="background:#FFFFFF;padding:0.5rem 0.85rem;font-size:0.82rem;justify-content:center;gap:0.35rem;border-color:#10b981;color:#10b981;">
+                    <span>🎥</span><span>Telehealth Call</span>
+                  </a>
+                </div>
               </div>
             {% else %}
               <div class="msg-locked">
                 <span>🔒</span>
-                <p>Book a session to connect directly with your clinician.</p>
+                <p>Book your first session above to connect directly via chat and video call with your licensed therapist.</p>
               </div>
             {% endif %}
+          </div>
+        </section>
+
+        <!-- ── Clinical Progress & Assessments Widget ── -->
+        <section class="db-card" id="assessments-widget">
+          <div class="db-card-header">
+            <div>
+              <h2 class="db-card-title">📊 Symptom Progress & Check-ins</h2>
+              <span style="font-size:0.75rem;color:var(--text-subtle);">Evidence-based PHQ-9 & GAD-7 tracking</span>
+            </div>
+            <a href="{% url 'assessments' %}" class="btn btn-outline" style="padding:0.35rem 0.75rem;font-size:0.78rem;">
+              Full Suite →
+            </a>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+            <!-- PHQ-9 snippet -->
+            <div style="background:var(--warm-sand);border:1px solid rgba(110,159,174,0.25);border-radius:12px;padding:0.85rem;">
+              <span style="font-size:0.72rem;color:var(--mist-blue);font-weight:700;text-transform:uppercase;">Depression (PHQ-9)</span>
+              {% if latest_phq9 %}
+                <div style="display:flex;align-items:baseline;justify-content:space-between;margin:0.35rem 0 0.2rem;">
+                  <strong style="font-size:1.15rem;color:var(--deep-teal);">{{ latest_phq9.total_score }} / 27</strong>
+                  <span style="font-size:0.72rem;font-weight:600;color:{{ latest_phq9.severity_color }};">
+                    {{ latest_phq9.get_severity_display }}
+                  </span>
+                </div>
+                <span style="font-size:0.7rem;color:var(--text-subtle);">{{ latest_phq9.created_at|date:"M j" }}</span>
+              {% else %}
+                <p style="font-size:0.78rem;color:var(--text-subtle);margin:0.4rem 0;">No check-in yet</p>
+                <a href="{% url 'take_assessment' 'phq9' %}" style="font-size:0.75rem;color:var(--coeus-blue);font-weight:600;text-decoration:underline;">Take check-in →</a>
+              {% endif %}
+            </div>
+
+            <!-- GAD-7 snippet -->
+            <div style="background:var(--warm-sand);border:1px solid rgba(110,159,174,0.25);border-radius:12px;padding:0.85rem;">
+              <span style="font-size:0.72rem;color:var(--mist-blue);font-weight:700;text-transform:uppercase;">Anxiety (GAD-7)</span>
+              {% if latest_gad7 %}
+                <div style="display:flex;align-items:baseline;justify-content:space-between;margin:0.35rem 0 0.2rem;">
+                  <strong style="font-size:1.15rem;color:var(--deep-teal);">{{ latest_gad7.total_score }} / 21</strong>
+                  <span style="font-size:0.72rem;font-weight:600;color:{{ latest_gad7.severity_color }};">
+                    {{ latest_gad7.get_severity_display }}
+                  </span>
+                </div>
+                <span style="font-size:0.7rem;color:var(--text-subtle);">{{ latest_gad7.created_at|date:"M j" }}</span>
+              {% else %}
+                <p style="font-size:0.78rem;color:var(--text-subtle);margin:0.4rem 0;">No check-in yet</p>
+                <a href="{% url 'take_assessment' 'gad7' %}" style="font-size:0.75rem;color:var(--coeus-blue);font-weight:600;text-decoration:underline;">Take check-in →</a>
+              {% endif %}
+            </div>
+          </div>
+
+          <div style="text-align:center;">
+            <a href="{% url 'assessments' %}" class="db-link" style="font-size:0.82rem;text-decoration:underline;">
+              View comprehensive score history and clinical trends →
+            </a>
           </div>
         </section>
 
@@ -595,6 +753,60 @@
       const formDiv = document.getElementById('mood-checkin-form');
       formDiv.style.display = formDiv.style.display === 'none' ? 'block' : 'none';
     });
+  }
+
+  // ── Constantly Rotating Affirmations Engine ──
+  const affirmations = {{ affirmations_json|safe|default:"[]" }};
+  if (affirmations && affirmations.length > 0) {
+    let currentAffirmationIdx = 0;
+    let isAffirmationPaused = false;
+    const affirmEl = document.getElementById('affirmation-text');
+    const counterEl = document.getElementById('affirmation-counter');
+    const pauseBtn = document.getElementById('affirmation-pause');
+    const nextBtn = document.getElementById('affirmation-next');
+    const prevBtn = document.getElementById('affirmation-prev');
+
+    function renderAffirmation(idx) {
+      if (!affirmEl) return;
+      affirmEl.style.opacity = '0';
+      affirmEl.style.transform = 'translateY(-4px)';
+      setTimeout(() => {
+        affirmEl.textContent = `"${affirmations[idx]}"`;
+        if (counterEl) {
+          counterEl.textContent = `Affirmation ${idx + 1} of ${affirmations.length}`;
+        }
+        affirmEl.style.opacity = '1';
+        affirmEl.style.transform = 'translateY(0)';
+      }, 300);
+    }
+
+    function nextAffirmation() {
+      currentAffirmationIdx = (currentAffirmationIdx + 1) % affirmations.length;
+      renderAffirmation(currentAffirmationIdx);
+    }
+
+    function prevAffirmation() {
+      currentAffirmationIdx = (currentAffirmationIdx - 1 + affirmations.length) % affirmations.length;
+      renderAffirmation(currentAffirmationIdx);
+    }
+
+    if (nextBtn) nextBtn.addEventListener('click', () => { nextAffirmation(); });
+    if (prevBtn) prevBtn.addEventListener('click', () => { prevAffirmation(); });
+
+    if (pauseBtn) {
+      pauseBtn.addEventListener('click', () => {
+        isAffirmationPaused = !isAffirmationPaused;
+        pauseBtn.textContent = isAffirmationPaused ? '▶' : '⏸';
+        pauseBtn.title = isAffirmationPaused ? 'Resume auto-change' : 'Pause auto-change';
+      });
+    }
+
+    // Auto rotate every 8 seconds
+    setInterval(() => {
+      if (!isAffirmationPaused) {
+        nextAffirmation();
+      }
+    }, 8000);
   }
 </script>
 {% endblock %}

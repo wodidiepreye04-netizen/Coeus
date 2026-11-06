@@ -10,7 +10,7 @@
   </div>
 
   <!-- ── Stat cards ── -->
-  <div class="tp-stats-row">
+  <div class="tp-stats-row" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
     <div class="tp-stat-card">
       <span class="tp-stat-number">{{ total_patients }}</span>
       <span class="tp-stat-label">Total Patients</span>
@@ -26,6 +26,16 @@
     <div class="tp-stat-card">
       <span class="tp-stat-number">{{ pending_sub_count }}</span>
       <span class="tp-stat-label">Pending Subscriptions</span>
+    </div>
+    <div class="tp-stat-card" style="border-left: 4px solid #fbbf24;">
+      <span class="tp-stat-number">
+        {% if avg_rating %}★ {{ avg_rating }}{% else %}—{% endif %}
+      </span>
+      <span class="tp-stat-label">Rating ({{ ratings_count }} review{{ ratings_count|pluralize }})</span>
+    </div>
+    <div class="tp-stat-card" style="border-left: 4px solid var(--turquoise);">
+      <span class="tp-stat-number">{{ unread_msg_count }}</span>
+      <span class="tp-stat-label">Unread Messages</span>
     </div>
   </div>
 
@@ -353,6 +363,13 @@
                       {% elif appt.status == "cancelled" %}
                         <span style="font-size:0.75rem;color:var(--text-subtle);">Cancelled / Refunded</span>
                       {% endif %}
+
+                      <!-- Direct Chat Quick Link -->
+                      <div style="margin-top:0.35rem;padding-top:0.35rem;border-top:1px solid rgba(255,255,255,0.06);">
+                        <a href="{% url 'therapist_chat' appt.user.id %}" class="tp-btn tp-btn--sm tp-btn--outline" style="font-size:0.72rem;padding:0.2rem 0.55rem;display:inline-flex;align-items:center;gap:0.25rem;">
+                          <span>💬</span><span>Chat / Call</span>
+                        </a>
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -363,6 +380,54 @@
       {% else %}
         <div class="tp-empty">
           <p>No pending appointment requests at this time.</p>
+        </div>
+      {% endif %}
+    </section>
+
+    <!-- ── 5. Patient Reviews & Session Ratings ── -->
+    <section class="tp-card" style="border-left: 4px solid #fbbf24;">
+      <div class="tp-card-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <h2 class="tp-card-title">⭐ Patient Feedback & Ratings</h2>
+          <p style="font-size:0.8rem;color:var(--text-muted);margin:0.2rem 0 0;">
+            {% if avg_rating %}
+              Average Rating: <strong>{{ avg_rating }} / 5.0</strong> based on {{ ratings_count }} review{{ ratings_count|pluralize }}
+            {% else %}
+              No reviews received yet.
+            {% endif %}
+          </p>
+        </div>
+        <span class="tp-card-count" style="background:rgba(251,191,36,0.15);color:#fbbf24;border-color:rgba(251,191,36,0.3);">
+          {{ ratings_count }} review{{ ratings_count|pluralize }}
+        </span>
+      </div>
+
+      {% if recent_ratings %}
+        <div style="display:flex;flex-direction:column;gap:0.75rem;margin-top:0.5rem;">
+          {% for r in recent_ratings %}
+            <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.85rem 1rem;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem;">
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                  <span style="color:#fbbf24;font-size:1.1rem;letter-spacing:0.05em;">{{ r.stars_display }}</span>
+                  <strong style="color:var(--text-primary);font-size:0.85rem;">{{ r.rating }}/5</strong>
+                </div>
+                <span style="font-size:0.72rem;color:var(--text-subtle);">
+                  {{ r.created_at|date:"M j, Y" }} · {{ r.user.email }}
+                </span>
+              </div>
+              {% if r.comment %}
+                <p style="font-size:0.82rem;color:var(--text-muted);margin:0;line-height:1.5;font-style:italic;">
+                  "{{ r.comment }}"
+                </p>
+              {% else %}
+                <span style="font-size:0.75rem;color:var(--text-subtle);font-style:italic;">No comment provided.</span>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="tp-empty">
+          <p>Completed session feedback will appear here as patients rate their sessions.</p>
         </div>
       {% endif %}
     </section>

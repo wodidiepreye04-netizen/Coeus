@@ -11,16 +11,33 @@
   </div>
 
   <!-- ── Patient header ── -->
-  <div class="tp-patient-header">
+  <div class="tp-patient-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
     <div>
       <h1 class="tp-page-title">
         {% if profile %}{{ profile.display_name }}{% else %}{{ patient.email }}{% endif %}
       </h1>
       <p class="tp-page-sub">{{ patient.email }}</p>
     </div>
-    {% if profile and profile.risk_level == "high" %}
-      <span class="tp-badge tp-badge--danger tp-badge--lg">⚠ High-Risk</span>
-    {% endif %}
+    
+    <div style="display:flex;align-items:center;gap:0.65rem;flex-wrap:wrap;">
+      {% if profile and profile.risk_level == "high" %}
+        <span class="tp-badge tp-badge--danger tp-badge--lg">⚠ High-Risk</span>
+      {% endif %}
+
+      <!-- Direct Chat & Call Buttons -->
+      <a href="{% url 'therapist_chat' patient.id %}" class="tp-btn tp-btn--primary" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.45rem 1rem;">
+        <span>💬</span><span>Chat with Patient</span>
+        {% if unread_messages_count > 0 %}
+          <span style="background:#ef4444;color:#fff;border-radius:50%;width:18px;height:18px;font-size:0.7rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;">
+            {{ unread_messages_count }}
+          </span>
+        {% endif %}
+      </a>
+
+      <a href="https://meet.jit.si/{{ jitsi_room }}" target="_blank" rel="noopener noreferrer" class="tp-btn tp-btn--confirm" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.45rem 1rem;">
+        <span>🎥</span><span>Start Call</span>
+      </a>
+    </div>
   </div>
 
   <div class="tp-detail-grid">
@@ -208,6 +225,69 @@
           </div>
         {% else %}
           <div class="tp-empty"><p>No appointments recorded for this patient.</p></div>
+        {% endif %}
+      </section>
+
+      <!-- Assessments History -->
+      <section class="tp-card">
+        <h2 class="tp-card-title">📊 PHQ-9 & GAD-7 Assessment History</h2>
+        {% if assessments %}
+          <div class="tp-table-wrap">
+            <table class="tp-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Assessment Type</th>
+                  <th>Total Score</th>
+                  <th>Clinical Severity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for a in assessments %}
+                  <tr>
+                    <td class="tp-td-muted">{{ a.created_at|date:"M j, Y · g:i A" }}</td>
+                    <td class="tp-td-bold">{{ a.get_assessment_type_display }}</td>
+                    <td>
+                      <strong>{{ a.total_score }}</strong> / {{ a.max_score }}
+                    </td>
+                    <td>
+                      <span class="tp-badge" style="background:{{ a.severity_color }}22;color:{{ a.severity_color }};border:1px solid {{ a.severity_color }}55;">
+                        {{ a.get_severity_display }}
+                      </span>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="tp-empty"><p>No standardized assessments taken by this patient yet.</p></div>
+        {% endif %}
+      </section>
+
+      <!-- Session Ratings by Patient -->
+      <section class="tp-card">
+        <h2 class="tp-card-title">⭐ Session Feedback from Patient</h2>
+        {% if ratings %}
+          <div style="display:flex;flex-direction:column;gap:0.75rem;">
+            {% for r in ratings %}
+              <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem 1rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
+                  <span style="color:#fbbf24;font-size:1rem;">{{ r.stars_display }} ({{ r.rating }}/5)</span>
+                  <span class="tp-td-muted" style="font-size:0.75rem;">{{ r.created_at|date:"M j, Y" }}</span>
+                </div>
+                {% if r.comment %}
+                  <p style="font-size:0.82rem;color:var(--text-muted);margin:0;font-style:italic;">
+                    "{{ r.comment }}"
+                  </p>
+                {% else %}
+                  <span class="tp-td-muted" style="font-size:0.75rem;font-style:italic;">No written feedback.</span>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="tp-empty"><p>No session reviews submitted by this patient yet.</p></div>
         {% endif %}
       </section>
 

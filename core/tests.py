@@ -17,6 +17,13 @@ from core.models import (
     SafetyPlan,
     Subscription,
     PaymentTransaction,
+    ChatMessage,
+    Assessment,
+    SessionRating,
+    Notification,
+    create_notification,
+    compute_phq9_severity,
+    compute_gad7_severity,
 )
 
 User = get_user_model()
@@ -903,4 +910,205 @@ class PatientDashboardAndFeaturesTests(TestCase):
         # Pending does not grant active access yet
         self.user.refresh_from_db()
         self.assertFalse(self.user.has_active_subscription)
+
+
+class ChatAndTelehealthTests(TestCase):
+    def setUp(self):
+        self.patient = User.objects.create_user(
+            email="patient.chat@example.com",
+            password="patientpassword123",
+            onboarding_complete=True,
+        )
+        OnboardingProfile.objects.create(
+            user=self.patient,
+            display_name="Chatty Client",
+            age=26,
+            gender="female",
+            mood_score=4,
+            has_seen_professional=False,
+            safety_status="safe",
+            immediate_need="listen",
+        )
+        self.therapist = User.objects.create_user(
+            email="therapist.chat@example.com",
+            password="therapistpassword123",
+            role="therapist",
+        )
+        # Establish relationship via appointment
+        self.appointment = Appointment.objects.create(
+            user=self.patient,
+            therapist=self.therapist,
+            presenting_concern="Need someone to talk to",
+            support_type="therapy",
+            status="confirmed",
+        )
+        self.client_patient = Client()
+        self.client_patient.force_login(self.patient)
+
+        self.client_therapist = Client()
+        self.client_therapist.force_login(self.therapist)
+
+    def test_chat_message_model(self):
+        msg = ChatMessage.objects.create(
+            sender=self.patient,
+            recipient=self.therapist,
+            content="Hello Doctor!",
+        )
+        self.assertEqual(str(msg), f"{self.patient.email} → {self.therapist.email} ({msg.created_at:%H:%M})")
+        self.assertFalse(msg.is_read)
+
+    def test_client_chat_room_view(self):
+        response = self.client_patient.get(reverse("chat_room", args=[self.therapist.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Licensed Clinician")
+        expected_room = f"coeus-session-{min(self.patient.id, self.therapist.id)}-{max(self.patient.id, self.therapist.id)}"
+        self.assertContains(response, expected_room)
+
+    def test_client_send_message_and_notification(self):
+        response = self.client_patient.post(
+            reverse("chat_send", args=[self.therapist.id]),
+            {"content": "I am feeling much better today!"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 200)
+        msg = ChatMessage.objects.filter(sender=self.patient, recipient=self.therapist).first()
+        self.assertIsNotNone(msg)
+        self.assertEqual(msg.content, "I am feeling much better today!")
+
+        # Notification generated for therapist
+        notif = Notification.objects.filter(user=self.therapist, notification_type="message").first()
+        self.assertIsNotNone(notif)
+        self.assertIn("Chatty Client", notif.title)
+
+    def test_therapist_chat_view_and_poll(self):
+        ChatMessage.objects.create(
+            sender=self.patient,
+            recipient=self.therapist,
+            content="Testing poll message",
+        )
+        response = self.client_therapist.get(reverse("therapist_chat_poll", args=[self.patient.id]))
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data["messages"]), 1)
+        self.assertEqual(data["messages"][0]["content"], "Testing poll message")
+
+
+class AssessmentTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="assessment.user@example.com",
+            password="password123",
+            onboarding_complete=True,
+        )
+        self.client = Client()
+        self.client.force_login(self.user)
+
+    def test_severity_computations(self):
+        self.assertEqual(compute_phq9_severity(3), "minimal")
+        self.assertEqual(compute_phq9_severity(8), "mild")
+        self.assertEqual(compute_phq9_severity(12), "moderate")
+        self.assertEqual(compute_phq9_severity(17), "moderately_severe")
+        self.assertEqual(compute_phq9_severity(22), "severe")
+
+        self.assertEqual(compute_gad7_severity(2), "minimal")
+        self.assertEqual(compute_gad7_severity(7), "mild")
+        self.assertEqual(compute_gad7_severity(11), "moderate")
+        self.assertEqual(compute_gad7_severity(16), "severe")
+
+    def test_take_phq9_assessment(self):
+        post_data = {f"q{i}": "1" for i in range(9)}  # total score = 9
+        response = self.client.post(reverse("take_assessment", args=["phq9"]), post_data)
+        self.assertRedirects(response, reverse("assessments"))
+
+        assessment = Assessment.objects.filter(user=self.user, assessment_type="phq9").first()
+        self.assertIsNotNone(assessment)
+        self.assertEqual(assessment.total_score, 9)
+        self.assertEqual(assessment.severity, "mild")
+        self.assertEqual(assessment.max_score, 27)
+
+    def test_take_gad7_assessment(self):
+        post_data = {f"q{i}": "2" for i in range(7)}  # total score = 14
+        response = self.client.post(reverse("take_assessment", args=["gad7"]), post_data)
+        self.assertRedirects(response, reverse("assessments"))
+
+        assessment = Assessment.objects.filter(user=self.user, assessment_type="gad7").first()
+        self.assertIsNotNone(assessment)
+        self.assertEqual(assessment.total_score, 14)
+        self.assertEqual(assessment.severity, "moderate")
+
+
+class RatingAndNotificationTests(TestCase):
+    def setUp(self):
+        self.patient = User.objects.create_user(
+            email="rating.patient@example.com",
+            password="password123",
+            onboarding_complete=True,
+        )
+        self.therapist = User.objects.create_user(
+            email="rating.therapist@example.com",
+            password="password123",
+            role="therapist",
+        )
+        self.appointment = Appointment.objects.create(
+            user=self.patient,
+            therapist=self.therapist,
+            presenting_concern="Burnout",
+            support_type="therapy",
+            status="completed",
+        )
+        self.client = Client()
+        self.client.force_login(self.patient)
+
+    def test_rate_session(self):
+        response = self.client.post(
+            reverse("rate_session", args=[self.appointment.id]),
+            {"rating": "5", "comment": "Life changing session!"},
+        )
+        self.assertRedirects(response, reverse("dashboard"))
+
+        rating = SessionRating.objects.filter(appointment=self.appointment).first()
+        self.assertIsNotNone(rating)
+        self.assertEqual(rating.rating, 5)
+        self.assertEqual(rating.comment, "Life changing session!")
+        self.assertEqual(rating.stars_display, "★★★★★")
+
+    def test_notification_flow(self):
+        notif = create_notification(
+            user=self.patient,
+            notification_type="appointment",
+            title="Appointment Confirmed",
+            message="Your session has been scheduled.",
+            link="/dashboard",
+        )
+        self.assertFalse(notif.is_read)
+
+        # Count API
+        res = self.client.get(reverse("notification_count"))
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["unread"], 1)
+
+        # Mark read
+        post_res = self.client.post(reverse("notification_read", args=[notif.id]))
+        self.assertRedirects(post_res, "/dashboard")
+        notif.refresh_from_db()
+        self.assertTrue(notif.is_read)
+
+
+class DashboardAffirmationsTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="affirmation.user@example.com",
+            password="password123",
+            onboarding_complete=True,
+        )
+        self.client = Client()
+        self.client.force_login(self.user)
+
+    def test_dashboard_renders_affirmations(self):
+        response = self.client.get(reverse("dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("affirmations_json", response.context)
+        self.assertContains(response, "Living Affirmation")
+        self.assertContains(response, "Rotates automatically every 8 seconds")
+
 
